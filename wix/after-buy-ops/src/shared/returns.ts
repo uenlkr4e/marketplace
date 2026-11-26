@@ -1,0 +1,57 @@
+// Types and constants shared by the backend, the dashboard and the site widget.
+
+// MVP defaults; these move to the Settings page.
+export const RETURN_WINDOW_DAYS = 30;
+export const RETURN_REASONS = [
+  'Changed my mind',
+  'Wrong size or fit',
+  'Damaged or defective',
+  'Not as described',
+  'Received the wrong item',
+  'Other',
+] as const;
+
+// REFUNDING is a short-lived lock while the payment provider processes a refund.
+export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'RECEIVED' | 'REFUNDING' | 'REFUNDED';
+
+// Requests in these states "hold" their quantities against the order. REFUNDED
+// isn't listed: once refunded, Wix's own line-item refundQuantity covers it.
+export const ACTIVE_STATUSES: ReturnStatus[] = ['REQUESTED', 'APPROVED', 'RECEIVED', 'REFUNDING'];
+
+export type ReturnItem = {
+  lineItemId: string;
+  name: string;
+  quantity: number;
+  unitAmount: number; // per-unit price paid, after discounts and tax
+};
+
+export type HistoryEntry = { status: ReturnStatus; at: string; note?: string };
+
+export type ReturnRequest = {
+  id: string;
+  rmaNumber: string;
+  orderId: string;
+  orderNumber: string;
+  customerEmail: string;
+  contactId: string | null;
+  items: ReturnItem[];
+  reason: string;
+  customerNote: string;
+  currency: string;
+  requestedAmount: number;
+  status: ReturnStatus;
+  merchantNote: string | null;
+  refundedAmount: number | null;
+  history: HistoryEntry[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MerchantAction = 'approve' | 'reject' | 'receive';
+
+export type RefundPlan =
+  | { kind: 'automatic'; paymentId: string; method: string }
+  | { kind: 'manual'; paymentId: string; method: string; reason: string; providerLink?: string | null }
+  | { kind: 'none'; reason: string };
+
+export const roundMoney = (n: number) => Math.round(n * 100) / 100;

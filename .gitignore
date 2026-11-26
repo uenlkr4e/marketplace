@@ -1,0 +1,21 @@
+# dependencies and build output
+node_modules/
+dist/
+out/
+
+# Wix CLI local state
+.wix/
+
+# environment variables and secrets
+.env
+.env.local
+.env.production
+
+# logs
+*.log
+npm-debug.log*
+
+# tooling
+.playwright-mcp/
+.idea/
+.DS_Store
