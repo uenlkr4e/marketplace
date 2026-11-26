@@ -59,11 +59,10 @@ Variables below refer to the trigger fields. In Wix's email editor, insert them 
 
 - [x] Triggers created in the app dashboard (Develop → Automations): Return requested / approved / rejected, with `contact_id` connected to the contact
 - [x] Backend reports the events. Tested: a return on order #10002 triggered the automation and the run ended without errors.
-- [x] Main dev site: automation "Return requested: confirmation email" is **active**, still with Wix's placeholder template ("Thanks For Getting in Touch")
-- [ ] Replace the placeholder with email 1 (Automations → the automation → Edit → Send an email → Email template → Edit)
-- [ ] Create the "approved" and "rejected" automations the same way (Create Automation → Start from Scratch → search "Return" → pick trigger → Action → Send an email)
-- [ ] Real-inbox test: place a test order with your own email address and submit a return. The test buyer's `@example.com` address can't receive mail, and the site's email counter stayed at 0/200.
+- [x] Main dev site: all three automations are **active** with their own subject, heading and body using the trigger variables (`${rma_number}`, `${order_number}`, `${items_summary}`, `${reason}`, `${contact.name.first}`): "Return requested: confirmation email", "Return approved: customer email", "Return rejected: customer email". The wording was set with the builder's "Configure with AI", so it's close to, not identical to, the copy above. The rejected email includes the merchant's rejection reason (`Reason: ${merchant_note}`).
+- [x] Sender: the site owner's name and email (the dev site default). Each merchant can change it in the email step's **Sender details**.
+- [x] Real-inbox test (2026-11-27): requested, approved and rejected emails received at the owner's address with all variables filled in.
 - [ ] Export the three automations as **pre-installed automations** (app dashboard → Automations → Create New → Pre-installed automation → pick the site automation) so every store gets them on install. The trigger can't be changed after publishing.
-- [ ] The dashboard has no field yet for the "note from the store" on approve/reject. The API accepts `note`; add an optional text box to the Approve/Reject buttons.
+- [x] Rejecting requires a reason (dashboard window + server check). It's stored as `merchant_note`, shown in the rejection email and in the order lookup widget. Approving needs no note. Tested 2026-11-27 with R10004-2.
 
 Note: Wix's automation emails count against the **store's** email quota (200 a month on a free site).

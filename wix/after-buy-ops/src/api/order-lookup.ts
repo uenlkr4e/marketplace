@@ -78,6 +78,7 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
         status: r.status,
         createdDate: r.createdAt,
         items: r.items.map((i) => ({ name: i.name, quantity: i.quantity })),
+        rejectionReason: r.status === 'REJECTED' ? r.merchantNote : null,
       })),
     },
   });

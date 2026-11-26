@@ -17,7 +17,10 @@ const EMAILS: Partial<Record<MerchantAction, ReturnEvent>> = {
   reject: 'return_rejected',
 };
 
-/** POST /merchant/return-action  { id, action: 'approve' | 'reject' | 'receive', note? } */
+// Rejecting needs a reason; it's stored as the merchant note and sent to the customer.
+const MAX_NOTE_LENGTH = 1000;
+
+/** POST /merchant/return-action  { id, action: 'approve' | 'reject' | 'receive', note? }  (note required for reject) */
 export const POST: APIRoute = withErrorHandling('merchant/return-action', async ({ request }) => {
   const merchant = await getMerchant();
   if (!merchant) {
@@ -26,20 +29,27 @@ export const POST: APIRoute = withErrorHandling('merchant/return-action', async 
 
   const body = (await request.json().catch(() => ({}))) as { id?: unknown; action?: unknown; note?: unknown };
   const id = String(body.id ?? '');
-  const rule = TRANSITIONS[String(body.action) as MerchantAction];
+  const action = String(body.action) as MerchantAction;
+  const rule = TRANSITIONS[action];
   if (!id || !rule) {
     return json({ error: 'Invalid request.' }, 400);
   }
 
-  const note = typeof body.note === 'string' ? body.note.slice(0, 1000) : undefined;
-  const updated = await transition(merchant.instanceId, id, rule.from, rule.to, { note, merchantNote: note });
+  const note = action === 'reject' && typeof body.note === 'string' ? body.note.trim() : '';
+  if (action === 'reject' && !note) {
+    return json({ error: 'Add a reason for the rejection.' }, 400);
+  }
+  if (note.length > MAX_NOTE_LENGTH) {
+    return json({ error: `Keep the note under ${MAX_NOTE_LENGTH} characters.` }, 400);
+  }
+  const updated = await transition(merchant.instanceId, id, rule.from, rule.to, note ? { note, merchantNote: note } : {});
   if (!updated) {
     const current = await getById(merchant.instanceId, id);
     return current
       ? json({ error: `This request is already ${current.status.toLowerCase()}. Refresh the page.`, request: current }, 409)
       : json({ error: 'Return request not found.' }, 404);
   }
-  const email = EMAILS[String(body.action) as MerchantAction];
+  const email = EMAILS[action];
   if (email) await notifyCustomer(email, updated);
   return json({ request: updated });
 });

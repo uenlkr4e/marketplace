@@ -9,6 +9,7 @@ import {
   EmptyState,
   FormField,
   Input,
+  InputArea,
   Loader,
   Modal,
   Page,
@@ -42,12 +43,16 @@ const money = (amount: number, currency: string) => {
 };
 
 type RefundDraft = { request: ReturnRequest; plan: RefundPlan; amount: string; restock: boolean; notify: boolean };
+// Rejecting requires a reason; it's shown to the customer in the rejection email.
+type RejectDraft = { request: ReturnRequest; reason: string };
+const MAX_REASON_LENGTH = 1000;
 
 const ReturnsPage: FC = () => {
   const [requests, setRequests] = useState<ReturnRequest[] | null>(null);
   const [filter, setFilter] = useState<'open' | 'all'>('open');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [refund, setRefund] = useState<RefundDraft | null>(null);
+  const [rejectDraft, setRejectDraft] = useState<RejectDraft | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -101,6 +106,13 @@ const ReturnsPage: FC = () => {
     );
   };
 
+  const confirmReject = async () => {
+    if (!rejectDraft || !rejectDraft.reason.trim()) return;
+    const { request, reason } = rejectDraft;
+    setRejectDraft(null);
+    await run(request, () => applyAction(request, 'reject', reason.trim()), `${request.rmaNumber} rejected.`);
+  };
+
   const visible = useMemo(
     () => (requests ?? []).filter((r) => filter === 'all' || OPEN.includes(r.status)),
     [requests, filter],
@@ -119,7 +131,7 @@ const ReturnsPage: FC = () => {
               size="small"
               skin="destructive"
               priority="secondary"
-              onClick={() => run(r, () => applyAction(r, 'reject'), `${r.rmaNumber} rejected.`)}
+              onClick={() => setRejectDraft({ request: r, reason: '' })}
             >
               Reject
             </Button>
@@ -210,6 +222,9 @@ const ReturnsPage: FC = () => {
                         {r.customerNote ? (
                           <Text size="tiny" secondary>{`“${r.customerNote}”`}</Text>
                         ) : null}
+                        {r.merchantNote ? (
+                          <Text size="tiny" weight="bold">{`Rejection reason: ${r.merchantNote}`}</Text>
+                        ) : null}
                       </Box>
                     ),
                   },
@@ -241,6 +256,34 @@ const ReturnsPage: FC = () => {
           </Card>
         </Page.Content>
       </Page>
+
+      <Modal isOpen={rejectDraft !== null} onRequestClose={() => setRejectDraft(null)} shouldCloseOnOverlayClick>
+        {rejectDraft && (
+          <CustomModalLayout
+            title={`Reject return ${rejectDraft.request.rmaNumber}`}
+            primaryButtonText="Reject"
+            primaryButtonProps={{ disabled: !rejectDraft.reason.trim(), skin: 'destructive' }}
+            primaryButtonOnClick={confirmReject}
+            secondaryButtonText="Cancel"
+            secondaryButtonOnClick={() => setRejectDraft(null)}
+            onCloseButtonClick={() => setRejectDraft(null)}
+            width="520px"
+            content={
+              <FormField label="Reason for rejecting" infoContent="Included in the email to the customer." required>
+                <InputArea
+                  value={rejectDraft.reason}
+                  onChange={(e) => setRejectDraft({ ...rejectDraft, reason: e.target.value })}
+                  placeholder="e.g. The item was marked final sale at checkout."
+                  rows={4}
+                  maxLength={MAX_REASON_LENGTH}
+                  hasCounter
+                  autoFocus
+                />
+              </FormField>
+            }
+          />
+        )}
+      </Modal>
 
       <Modal isOpen={refund !== null} onRequestClose={() => setRefund(null)} shouldCloseOnOverlayClick>
         {refund && (

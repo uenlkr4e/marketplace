@@ -19,7 +19,12 @@ type LookupResult = {
     eligible: boolean;
     reason: string | null;
     windowEndsAt: string | null;
-    requests: { rmaNumber: string; status: string; items: { name: string; quantity: number }[] }[];
+    requests: {
+      rmaNumber: string;
+      status: string;
+      items: { name: string; quantity: number }[];
+      rejectionReason: string | null;
+    }[];
   };
 };
 
@@ -143,11 +148,15 @@ class OrderLookup extends HTMLElement {
         el(
           'ul',
           {},
-          order.returns.requests.map((r) =>
-            el('li', {
+          order.returns.requests.map((r) => {
+            const li = el('li', {
               textContent: `${r.rmaNumber}: ${r.items.map((i) => `${i.name} × ${i.quantity}`).join(', ')} (${STATUS_LABELS[r.status] ?? r.status})`,
-            }),
-          ),
+            });
+            if (r.rejectionReason) {
+              li.append(el('br'), el('span', { className: 'abo-muted', textContent: `Reason: ${r.rejectionReason}` }));
+            }
+            return li;
+          }),
         ),
       );
     }

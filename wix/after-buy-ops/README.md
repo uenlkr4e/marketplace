@@ -27,7 +27,7 @@ Emails are sent **by Wix, as the store**. There's no email provider or domain to
 |---|---|---|
 | Return requested | `return_requested` | `POST /return-request` |
 | Return approved | `return_approved` | `POST /merchant/return-action` (approve) |
-| Return rejected | `return_rejected` | `POST /merchant/return-action` (reject) |
+| Return rejected | `return_rejected` | `POST /merchant/return-action` (reject; a reason is required and sent as `merchant_note`) |
 | Refunded | none | Wix's own refund email (`sendCustomerEmail` on refund) |
 
 - The triggers are configured in the app dashboard under **Develop → Automations**. They share one payload: `contact_id` (UUID marked `identityType: contact`, so the automation can email that contact), `rma_number`, `order_number`, `items_summary`, `reason`, `merchant_note`, `requested_at`.

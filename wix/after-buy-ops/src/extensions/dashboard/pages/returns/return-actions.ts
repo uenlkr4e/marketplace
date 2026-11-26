@@ -21,10 +21,10 @@ export async function listReturnRequests(): Promise<ReturnRequest[]> {
   return (await call<{ requests: ReturnRequest[] }>('merchant/returns')).requests;
 }
 
-export async function applyAction(request: ReturnRequest, action: MerchantAction): Promise<ReturnRequest> {
+export async function applyAction(request: ReturnRequest, action: MerchantAction, note?: string): Promise<ReturnRequest> {
   const { request: updated } = await call<{ request: ReturnRequest }>('merchant/return-action', {
     method: 'POST',
-    body: { id: request.id, action },
+    body: { id: request.id, action, note },
   });
   return updated;
 }
