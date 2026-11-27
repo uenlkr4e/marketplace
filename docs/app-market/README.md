@@ -35,8 +35,9 @@ To re-render after a change: run `python docs/app-market/src/generate.py`, then 
 - [x] Demo order for reviewers: **#10003**, email **demo@parcelback.app** (Round Eyeglasses + Baseball Cap, paid, DHL tracking 00340434161094042557). Return and withdrawal are both open until late December 2026; recreate the order after that.
 - [x] demo@parcelback.app is forwarded (all @parcelback.app addresses forward)
 - [x] Widget styling fixed and released as **1.1.0** (2026-11-28): dark primary buttons, outlined secondary, 16px base text. The demo site picked it up automatically.
+- [x] Submitted and published (2026-11-28): passed Wix's AI review straight away; no version picker or notes field in the submit flow. Live at https://www.wix.com/app-market/86ebe6bd-c355-479b-8ad9-80de52f3cd9e . parcelback.app now links there.
 
-**Note for Wix reviewers** (paste into the submission notes):
+**Note for Wix reviewers** (the submit flow has no notes field; send this if a reviewer asks how to test):
 
 > Demo site: https://dev-sitex-1776621954.wix-development-sites.org/ . On the home page, look up order **10003** with email **demo@parcelback.app** to see tracking, start a return, or use the EU withdrawal button. Requests then appear in the dashboard under Apps → Parcelback → Returns, where they can be approved, rejected or refunded. Settings (return window, reasons, final-sale products) are under Apps → Parcelback → Settings.
 
@@ -75,4 +76,4 @@ To re-render after a change: run `python docs/app-market/src/generate.py`, then 
 
 **Category:** the eCommerce / store management category closest to "returns" in the Get Found page.
 
-**Demo site:** needs a published Wix site with the app installed. Not set yet; publish a demo store (for example the main dev site) once the first version is released.
+**Demo site:** https://dev-sitex-1776621954.wix-development-sites.org/ (set in App Info).
