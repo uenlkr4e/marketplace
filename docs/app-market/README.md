@@ -27,7 +27,8 @@ To re-render after a change: run `python docs/app-market/src/generate.py`, then 
 - [x] Get Found (2026-11-28): category Sell Online; keywords returns, order tracking, refunds, returns portal, EU withdrawal
 - [x] Pricing (2026-11-28): Free (beta)
 - [ ] Security & Privacy: answers filled in but not saved; Wix requires the owner to tick the confirmation box. Draft answers: access protected Yes; data Encrypted (TLS in transit, Neon encrypts at rest); cloud Yes, Amazon Web Services (Neon, Frankfurt); sells data No; complaints No; breaches No; DPO No
-- [ ] Demo site URL (after the first release)
+- [x] Version 1.0.0 released (2026-11-28) with `wix app release --version-type major`. Not yet submitted for review or distributed.
+- [ ] Demo site URL
 
 ## Listing text
 
