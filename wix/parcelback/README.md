@@ -174,6 +174,7 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [ ] Automatic card refund (needs an order paid through a refundable provider)
 - [ ] EU withdrawal: legal review of the flow and wording (including the translated button labels); a model withdrawal form link
 - [ ] Translations were written without a native-speaker review; customer emails and the dashboard are English only
+- [ ] Delete a store's data within 30 days of uninstalling (promised in `site/privacy.html`): handle Wix's "app removed" event and delete its `return_requests`, `store_settings` and lock rows
 - [ ] Partial-quantity refunds, multi-payment orders, shipping refunds
 - [ ] Rotate the Neon password (it was shared in a chat) and re-run `wix app env set`
 - [ ] Thank-you page plugin slot isn't offered by `wix app generate` yet

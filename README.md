@@ -5,5 +5,6 @@ Third-party apps for e-commerce and marketplace platforms.
 | Path | What |
 |---|---|
 | `wix/parcelback/` | **Parcelback: Returns & Order Tracking**: Wix app for guest order tracking, self-serve returns and refunds, and the EU withdrawal button. Setup, architecture and test status are in its [README](wix/parcelback/README.md). |
+| `site/` | Website (landing page, privacy policy, terms, support). Static HTML for Cloudflare Pages; see its [README](site/README.md). |
 | `docs/wix-post-purchase-suite-spec.md` | Product spec and MVP plan |
 | `docs/data/` | App store snapshots (Wix, Tiendanube) used for the gap analysis, scraped 2026-11-26 |
