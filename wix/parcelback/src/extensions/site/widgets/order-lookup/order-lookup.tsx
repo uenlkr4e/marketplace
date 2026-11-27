@@ -44,18 +44,42 @@ type Mode = 'track' | 'withdraw';
 
 type Customer = { orderNumber: string; email: string };
 
+// Explicit defaults: Wix themes reset buttons and font sizes, which left the
+// widget's buttons looking like plain text on a live site.
 const STYLES = `
-  order-lookup { display: block; font: inherit; color: inherit; }
-  order-lookup .abo-card { padding: 16px; border: 1px solid #ddd; border-radius: 8px; }
-  order-lookup form { display: grid; gap: 8px; }
-  order-lookup input, order-lookup button, order-lookup select, order-lookup textarea { font: inherit; padding: 8px 10px; }
-  order-lookup button { cursor: pointer; }
+  order-lookup { display: block; color: inherit; font-family: inherit; font-size: 16px; line-height: 1.5; }
+  order-lookup .abo-card { box-sizing: border-box; padding: 20px 22px; border: 1px solid #d9d9d9; border-radius: 10px; background: #fff; }
+  order-lookup .abo-card h2 { font-size: 22px; line-height: 1.25; font-weight: 700; margin: 0 0 12px; }
+  order-lookup .abo-card h3 { font-size: 16px; font-weight: 700; margin: 18px 0 6px; }
+  order-lookup .abo-card p { margin: 6px 0; }
+  order-lookup .abo-card ul { margin: 4px 0 8px; padding-left: 20px; }
+  order-lookup .abo-card a { color: inherit; text-decoration: underline; }
+  order-lookup form { display: grid; gap: 10px; }
+  order-lookup .abo-card input, order-lookup .abo-card select, order-lookup .abo-card textarea {
+    box-sizing: border-box; width: 100%; font: inherit; font-size: 15px; color: #1f1f1f;
+    padding: 10px 12px; border: 1px solid #b9b9b9; border-radius: 6px; background: #fff;
+  }
+  order-lookup .abo-row select { width: auto; min-width: 140px; }
+  order-lookup .abo-card input:focus, order-lookup .abo-card select:focus, order-lookup .abo-card textarea:focus {
+    outline: 2px solid #1f1f1f; outline-offset: 1px;
+  }
+  order-lookup .abo-card button {
+    box-sizing: border-box; display: inline-block; justify-self: start; margin: 4px 0;
+    font: inherit; font-size: 15px; font-weight: 600; line-height: 1.2; text-align: center;
+    padding: 11px 18px; border-radius: 6px; cursor: pointer;
+    border: 1px solid #1f1f1f; background: #1f1f1f; color: #fff;
+  }
+  order-lookup .abo-card button:hover { background: #3a3a3a; border-color: #3a3a3a; }
+  order-lookup .abo-card button:disabled { opacity: 0.6; cursor: default; }
+  order-lookup .abo-card button.abo-secondary { background: transparent; color: #1f1f1f; }
+  order-lookup .abo-card button.abo-secondary:hover { background: #f2f2f2; }
+  order-lookup .abo-card button.abo-link {
+    background: none; border: none; padding: 0; margin: 2px 0; font-weight: 400; color: inherit; text-decoration: underline;
+  }
   order-lookup .abo-error { color: #b00020; }
   order-lookup .abo-muted { opacity: 0.75; }
-  order-lookup .abo-row { display: flex; gap: 8px; align-items: center; }
+  order-lookup .abo-row { display: flex; gap: 10px; align-items: center; }
   order-lookup .abo-row label { flex: 1; }
-  order-lookup .abo-link { background: none; border: none; padding: 0; text-decoration: underline; justify-self: start; }
-  order-lookup ul { padding-left: 18px; }
 `;
 
 // Builds an element; all text goes through textContent, never parsed as HTML.
@@ -247,7 +271,7 @@ class OrderLookup extends HTMLElement {
       }
     }
 
-    const back = el('button', { type: 'button', textContent: t('lookupAnother') });
+    const back = el('button', { type: 'button', className: 'abo-secondary', textContent: t('lookupAnother') });
     back.addEventListener('click', () => this.renderForm());
 
     const fulfillmentKey = `fulfillment.${order.fulfillmentStatus}`;
@@ -291,7 +315,7 @@ class OrderLookup extends HTMLElement {
     ]);
     const note = el('textarea', { name: 'note', placeholder: t('notePlaceholder'), maxLength: 1000, rows: 3 });
     const submit = el('button', { type: 'submit', textContent: t('submitReturn') });
-    const cancel = el('button', { type: 'button', textContent: t('cancel') });
+    const cancel = el('button', { type: 'button', className: 'abo-secondary', textContent: t('cancel') });
     cancel.addEventListener('click', () => this.renderResult(customer, order));
 
     const form = el('form', {}, [...rows.map((r) => r.row), reason, note, submit, cancel]);
@@ -359,7 +383,7 @@ class OrderLookup extends HTMLElement {
     const name = el('input', { name: 'name', placeholder: t('namePlaceholder'), value: order.customerName, required: true, maxLength: 200 });
     const note = el('textarea', { name: 'note', placeholder: t('commentPlaceholder'), maxLength: 1000, rows: 3 });
     const submit = el('button', { type: 'submit', textContent: t('confirmWithdrawal') });
-    const cancel = el('button', { type: 'button', textContent: t('cancel') });
+    const cancel = el('button', { type: 'button', className: 'abo-secondary', textContent: t('cancel') });
     cancel.addEventListener('click', () => this.renderResult(customer, order));
 
     const form = el('form', {}, [
@@ -409,7 +433,7 @@ class OrderLookup extends HTMLElement {
       const submittedAt = new Date(receipt.submittedAt).toLocaleString(this.locale, { dateStyle: 'long', timeStyle: 'short' });
       const confirmation = el('p', { textContent: t('withdrawalReceivedText', { number: order.number, date: submittedAt }) });
       confirmation.setAttribute('role', 'status');
-      const back = el('button', { type: 'button', textContent: t('backToOrder') });
+      const back = el('button', { type: 'button', className: 'abo-secondary', textContent: t('backToOrder') });
       back.addEventListener('click', () => void this.lookup(customer));
       this.mount(
         el('h2', { textContent: t('withdrawalReceivedTitle') }),

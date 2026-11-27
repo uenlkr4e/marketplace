@@ -33,8 +33,8 @@ To re-render after a change: run `python docs/app-market/src/generate.py`, then 
 - [x] Security & Privacy confirmed and saved by the owner (2026-11-28)
 - [x] Demo site (2026-11-28): https://dev-sitex-1776621954.wix-development-sites.org/ (second dev site, version 1.0.0, order lookup widget with the EU withdrawal button on). Set in App Info.
 - [x] Demo order for reviewers: **#10003**, email **demo@parcelback.app** (Round Eyeglasses + Baseball Cap, paid, DHL tracking 00340434161094042557). Return and withdrawal are both open until late December 2026; recreate the order after that.
-- [ ] Forward demo@parcelback.app in Cloudflare Email Routing (customer emails from reviewers' test returns go there)
-- [ ] Widget styling: on a live site the buttons render as plain text (no background/border); give them a visible default style before review
+- [x] demo@parcelback.app is forwarded (all @parcelback.app addresses forward)
+- [ ] Widget styling fixed in code (dark primary buttons, outlined secondary, 16px base text; checked on the live demo site by injecting the CSS). **Needs a release** (1.1.0) to reach stores.
 
 **Note for Wix reviewers** (paste into the submission notes):
 
