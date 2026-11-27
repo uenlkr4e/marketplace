@@ -41,6 +41,8 @@ To re-render after a change: run `python docs/app-market/src/generate.py`, then 
 
 > Demo site: https://dev-sitex-1776621954.wix-development-sites.org/ . On the home page, look up order **10003** with email **demo@parcelback.app** to see tracking, start a return, or use the EU withdrawal button. Requests then appear in the dashboard under Apps → Parcelback → Returns, where they can be approved, rejected or refunded. Settings (return window, reasons, final-sale products) are under Apps → Parcelback → Settings.
 
+- [x] Translations (2026-11-28): DE, FR, ES, IT, NL, PT added under App Profile → Translations. Market listing text and keywords for each language, plus the dashboard labels (automation and trigger names, trigger fields, page titles, widget name), are in `translations.json`. All 72 items translated and activated; the backend worker has no text. The images and banner reuse the English files (the banner has no text). Activated translations go live with the next market listing update and the next app release.
+
 ## Listing text
 
 **App name** (30 max): Parcelback: Returns & Tracking
