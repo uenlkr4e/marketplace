@@ -24,7 +24,9 @@ To re-render after a change: run `python docs/app-market/src/generate.py`, then 
 - [x] Media: the five listing images (in order) and the promotional banner saved
 - [x] Company Info (2026-11-28): listed as an individual, Shane Ulker; Parcelback icon as logo; street-level address (Selçuk, Hacı Bekir Sokak, Selçuklu/Konya, Türkiye); website and privacy policy links
 - [x] Contact Info (2026-11-28): support@parcelback.app for support, billing and urgent (split later once billing@ and urgent@ forward); phone +90 554 385 2295
-- [ ] Get Found: keywords and category (below)
+- [x] Get Found (2026-11-28): category Sell Online; keywords returns, order tracking, refunds, returns portal, EU withdrawal
+- [x] Pricing (2026-11-28): Free (beta)
+- [ ] Security & Privacy: answers filled in but not saved; Wix requires the owner to tick the confirmation box. Draft answers: access protected Yes; data Encrypted (TLS in transit, Neon encrypts at rest); cloud Yes, Amazon Web Services (Neon, Frankfurt); sells data No; complaints No; breaches No; DPO No
 - [ ] Demo site URL (after the first release)
 
 ## Listing text
