@@ -180,7 +180,7 @@ npm run db:delete-store -- <instanceId>   # delete one store's data (support req
 
 ## Open items
 
-- [ ] Merchant endpoints with a real anonymous **VISITOR** token (needs a published site). The editor-preview token tested was the owner's own USER token, which is allowed by design.
+- [x] Merchant endpoints with a real anonymous visitor token (2026-11-28, published demo site on 1.0.0): `/merchant/returns`, `/merchant/settings` and `/merchant/return-action` all answer 403 "Not allowed."; the visitor's order lookup works.
 - [ ] Refund modal UI on a fresh request (its `/merchant/refund-plan` call wasn't exercised through the UI after the migration)
 - [ ] Automatic card refund (needs an order paid through a refundable provider)
 - [ ] EU withdrawal: legal review of the flow and wording (including the translated button labels); a model withdrawal form link

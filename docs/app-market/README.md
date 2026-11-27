@@ -30,7 +30,8 @@ To re-render after a change: run `python docs/app-market/src/generate.py`, then 
 - [x] Version 1.0.0 released (2026-11-28) with `wix app release --version-type major`. Not yet submitted for review or distributed.
 - [x] Automation triggers published to English users (2026-11-28). End-to-end test on 1.0.0 (second dev site): order #10002 → return R10002-1 through the widget → "Return requested: confirmation email" ran (Total triggered: 1, run Ended, no errors). The automations list still labels the trigger "Trigger not available"; that label is stale. All four triggers then published to all users (2026-11-28, can't be reverted).
 - [x] Uninstall deletion verified on 1.0.0 (see wix/parcelback/README.md)
-- [ ] Demo site URL
+- [x] Security & Privacy confirmed and saved by the owner (2026-11-28)
+- [x] Demo site (2026-11-28): https://dev-sitex-1776621954.wix-development-sites.org/ (second dev site, version 1.0.0, order lookup widget with the EU withdrawal button on). Set in App Info.
 
 ## Listing text
 
