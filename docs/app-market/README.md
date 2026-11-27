@@ -32,6 +32,13 @@ To re-render after a change: run `python docs/app-market/src/generate.py`, then 
 - [x] Uninstall deletion verified on 1.0.0 (see wix/parcelback/README.md)
 - [x] Security & Privacy confirmed and saved by the owner (2026-11-28)
 - [x] Demo site (2026-11-28): https://dev-sitex-1776621954.wix-development-sites.org/ (second dev site, version 1.0.0, order lookup widget with the EU withdrawal button on). Set in App Info.
+- [x] Demo order for reviewers: **#10003**, email **demo@parcelback.app** (Round Eyeglasses + Baseball Cap, paid, DHL tracking 00340434161094042557). Return and withdrawal are both open until late December 2026; recreate the order after that.
+- [ ] Forward demo@parcelback.app in Cloudflare Email Routing (customer emails from reviewers' test returns go there)
+- [ ] Widget styling: on a live site the buttons render as plain text (no background/border); give them a visible default style before review
+
+**Note for Wix reviewers** (paste into the submission notes):
+
+> Demo site: https://dev-sitex-1776621954.wix-development-sites.org/ . On the home page, look up order **10003** with email **demo@parcelback.app** to see tracking, start a return, or use the EU withdrawal button. Requests then appear in the dashboard under Apps → Parcelback → Returns, where they can be approved, rejected or refunded. Settings (return window, reasons, final-sale products) are under Apps → Parcelback → Settings.
 
 ## Listing text
 
