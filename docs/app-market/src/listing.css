@@ -1,0 +1,96 @@
+@import url('/site/fonts/fonts.css');
+
+/* App Market listing images, 1600 x 1200 (4:3). Same look as parcelback.app. */
+:root {
+  --kraft: #e9dcc4;
+  --paper: #fbf7ef;
+  --ink: #1d1a16;
+  --ink-soft: #4a443b;
+  --stamp: #c2372b;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  width: 1600px;
+  height: 1200px;
+  overflow: hidden;
+  color: var(--ink);
+  font-family: 'Bricolage Grotesque', sans-serif;
+  background-color: var(--kraft);
+  background-image:
+    repeating-linear-gradient(115deg, rgb(255 255 255 / 0.05) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(25deg, rgb(120 90 40 / 0.05) 0 1px, transparent 1px 5px),
+    radial-gradient(circle at 15% 10%, rgb(255 255 255 / 0.4), transparent 50%);
+  position: relative;
+}
+
+.mono { font-family: 'IBM Plex Mono', monospace; }
+
+.kicker {
+  display: inline-block;
+  font: 600 22px 'IBM Plex Mono', monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--stamp);
+  margin-bottom: 26px;
+}
+
+h1 {
+  font-size: 76px;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  font-weight: 800;
+  margin: 0 0 26px;
+}
+
+h1 em { font-style: normal; color: var(--stamp); }
+
+.sub {
+  font-size: 30px;
+  line-height: 1.4;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.frame {
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 12px 12px 0 rgb(29 26 22 / 0.2);
+}
+
+.frame img { display: block; width: 100%; border: 2px solid rgb(29 26 22 / 0.2); border-radius: 4px; }
+
+/* Browser chrome around a storefront screenshot. */
+.browser { padding: 0; overflow: hidden; }
+.browser .bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 3px solid var(--ink);
+  background: #efe6d3;
+  font: 500 20px 'IBM Plex Mono', monospace;
+  color: var(--ink-soft);
+}
+.browser .bar i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--ink); display: block; }
+.browser .bar span { margin-left: 12px; }
+.browser .page { background: #fff; padding: 28px 34px 34px; }
+.browser .page img { border: 0; }
+
+.brand {
+  position: absolute;
+  left: 90px;
+  bottom: 60px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+}
+.brand svg { width: 46px; height: 46px; }
