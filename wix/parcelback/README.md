@@ -139,7 +139,7 @@ npm run db:delete-store -- <instanceId>   # delete one store's data (support req
 
 - [x] `deleteStoreData` on the second dev site's store (after uninstalling the app there): its request and settings were deleted; a second run deleted nothing; the main dev site's data was untouched
 - [x] `npm run db:delete-store` rejects a malformed ID and reports what it deleted
-- [ ] **The event itself:** uninstalling did not deliver `onAppInstanceRemoved`, neither to `wix app dev` nor to a `wix app preview` build. Wix's docs say not every event reaches local development; app lifecycle events most likely only reach a released version. Re-test after the first release by uninstalling from a dev site and checking the store's rows are gone.
+- [x] **The event itself (2026-11-28, version 1.0.0):** installed the released version on the second dev site, saved settings through the hosted backend, uninstalled from the Editor: the store's `store_settings` row was deleted by the event; the main dev site's data was untouched. (It does not reach `wix app dev` or `wix app preview`; only released versions get it.)
 
 **Final sale products (2026-11-27):**
 
@@ -185,7 +185,6 @@ npm run db:delete-store -- <instanceId>   # delete one store's data (support req
 - [ ] Automatic card refund (needs an order paid through a refundable provider)
 - [ ] EU withdrawal: legal review of the flow and wording (including the translated button labels); a model withdrawal form link
 - [ ] Translations were written without a native-speaker review; customer emails and the dashboard are English only
-- [ ] Verify the "app removed" deletion after the first release (see Tested). Until then, `npm run db:delete-store` covers deletion requests.
 - [ ] Partial-quantity refunds, multi-payment orders, shipping refunds
 - [ ] Rotate the Neon password (it was shared in a chat) and re-run `wix app env set`
 - [ ] Thank-you page plugin slot isn't offered by `wix app generate` yet

@@ -28,6 +28,8 @@ To re-render after a change: run `python docs/app-market/src/generate.py`, then 
 - [x] Pricing (2026-11-28): Free (beta)
 - [ ] Security & Privacy: answers filled in but not saved; Wix requires the owner to tick the confirmation box. Draft answers: access protected Yes; data Encrypted (TLS in transit, Neon encrypts at rest); cloud Yes, Amazon Web Services (Neon, Frankfurt); sells data No; complaints No; breaches No; DPO No
 - [x] Version 1.0.0 released (2026-11-28) with `wix app release --version-type major`. Not yet submitted for review or distributed.
+- [ ] **Publish the four automation triggers** (app dashboard → Develop → Automations). Tested 2026-11-28 on a fresh install of 1.0.0: all four pre-installed email automations were added and Active, but show "Trigger not available", so no emails will be sent until the triggers are published. Publishing requires ticking a 5-item checklist; one item ("translated", via a request to Wix's translation team on Slack) hasn't been done.
+- [x] Uninstall deletion verified on 1.0.0 (see wix/parcelback/README.md)
 - [ ] Demo site URL
 
 ## Listing text
