@@ -9,8 +9,10 @@ import {
   fail,
   json,
   parseCustomer,
+  tooManyRequests,
 } from '../backend/returns';
 import { getCaller } from '../backend/caller';
+import { checkLimits, recordFailedLookup } from '../backend/limits';
 import { getSettings, listForOrder } from '../backend/db';
 
 /**
@@ -21,7 +23,8 @@ import { getSettings, listForOrder } from '../backend/db';
  * and "no such order" and "wrong email" get the same 404 so the endpoint
  * can't be used to discover order numbers.
  *
- * TODO before launch: per-IP / per-site rate limiting (needs shared storage).
+ * Rate-limited per client and per store (src/backend/limits.ts); failed
+ * lookups count separately, so guessing is cut off quickly.
  */
 export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request }) => {
   let customer: ReturnType<typeof parseCustomer>;
@@ -39,8 +42,14 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
     return fail('invalid_request', 'Invalid request.', 401);
   }
 
+  const limited = await checkLimits(request, caller);
+  if (limited) {
+    return tooManyRequests(limited);
+  }
+
   const order = await findCustomerOrder(customer.orderNumber, customer.email);
   if (!order?._id) {
+    await recordFailedLookup(request, caller);
     return json(NOT_FOUND, 404);
   }
 

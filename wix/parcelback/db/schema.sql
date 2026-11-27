@@ -47,3 +47,22 @@ create table if not exists store_settings (
   return_reasons jsonb not null,
   updated_at timestamptz not null default now()
 );
+
+-- Rate limiting for the public (customer) endpoints: one counter per key and fixed time window.
+-- Keys are hashed (store + rule + client), so no IP addresses are stored. (added 2026-11-27)
+create table if not exists rate_limits (
+  key text not null,
+  window_start timestamptz not null,
+  count integer not null default 1,
+  primary key (key, window_start)
+);
+
+-- Short per-order lock so two simultaneous requests can't claim the same items.
+-- Expires on its own if a request dies while holding it. (added 2026-11-27)
+create table if not exists order_locks (
+  instance_id text not null,
+  order_id text not null,
+  token uuid not null,
+  locked_until timestamptz not null,
+  primary key (instance_id, order_id)
+);

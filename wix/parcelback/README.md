@@ -22,6 +22,12 @@ Dashboard pages (Returns,       ──►  /merchant/returns, /merchant/return-a
 - **Merchant endpoints** accept only `subjectType === 'USER'` (site owner or collaborators). Anonymous requests get 401 from Wix.
 - **Status rules are enforced on the server** with atomic conditional updates (`transition()` in `src/backend/db.ts`). Refunds lock the request (`REFUNDING`) before calling the payment provider, so a double click can't refund twice; on failure the status is restored.
 - **No Wix CMS needed** (the old data-collection extension was removed).
+- **Rate limits** (`src/backend/limits.ts`, `rate_limits` table) on the public endpoints. Blocked calls get 429 with `Retry-After` and code `rate_limited`, which the widget translates.
+  - 30 calls per client per 10 minutes.
+  - 10 failed lookups (wrong order number or email) per client per hour.
+  - 200 failed lookups per store per hour, to stop guessing spread over many visitors.
+  - A client is the IP address if the platform forwards one, else the Wix visitor ID. In dev no IP header reaches the app, so it's the visitor ID. Keys are SHA-256 hashes, so no IPs are stored.
+- **Per-order lock** (`withOrderLock` in `src/backend/db.ts`, `order_locks` table): return and withdrawal requests re-read existing requests, check quantities and insert while holding a lock on the order. A second request waits up to about 3 seconds, then gets 409 `order_busy`. Locks expire after 30 seconds if a request dies while holding one.
 
 ## Customer emails (Wix Automations)
 
@@ -117,6 +123,13 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [x] Editor widget settings: "EU withdrawal button" toggle (off by default) shows and hides the "Withdraw from contract here" link immediately
 - [x] Acknowledgement email received in a real inbox with all details filled in
 
+**Rate limits and order lock (2026-11-27):**
+
+- [x] 10 wrong-email lookups gave 404; the 11th gave 429 `rate_limited` with Retry-After, and the widget showed the message
+- [x] Lock test against Neon: three overlapping jobs ran one after another; a waiter blocked for more than ~3 s got `OrderBusyError`
+- [x] With a lock held on #10003, a return request waited, then got 409 `order_busy` (shown in German). After release, the same request reached the eligibility check and left no lock behind.
+- [ ] On a published site: check whether an IP header reaches the app (if not, limits fall back to the visitor ID, and the per-store limit carries the load)
+
 **Settings page (2026-11-27):**
 
 - [x] Defaults load for a store without saved settings; a window of 0 is rejected (Save disabled); duplicate custom reasons are rejected regardless of case
@@ -144,10 +157,8 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [ ] Merchant endpoints with a real anonymous **VISITOR** token (needs a published site). The editor-preview token tested was the owner's own USER token, which is allowed by design.
 - [ ] Refund modal UI on a fresh request (its `/merchant/refund-plan` call wasn't exercised through the UI after the migration)
 - [ ] Automatic card refund (needs an order paid through a refundable provider)
-- [ ] Two simultaneous *requests* (returns or withdrawals) for the same items can both pass the quantity check (refunds are protected; requests aren't yet)
 - [ ] EU withdrawal: legal review of the flow and wording (including the translated button labels); a model withdrawal form link
 - [ ] Translations were written without a native-speaker review; customer emails and the dashboard are English only
-- [ ] Rate limiting for public endpoints (Neon can hold the counters now)
 - [ ] Product exclusions (final sale) on the Settings page; partial-quantity refunds, multi-payment orders, shipping refunds
 - [ ] Rotate the Neon password (it was shared in a chat) and re-run `wix app env set`
 - [ ] Thank-you page plugin slot isn't offered by `wix app generate` yet

@@ -172,3 +172,66 @@ export async function saveSettings(instanceId: string, settings: StoreSettings):
                     updated_at = now()`;
   return settings;
 }
+
+/**
+ * Adds one hit to a fixed-window counter and returns the new count and the
+ * seconds until the window resets. `key` must already be hashed.
+ */
+export async function hitCounter(key: string, windowSeconds: number): Promise<{ count: number; resetIn: number }> {
+  const [row] = (await sql()`
+    insert into rate_limits (key, window_start, count)
+    values (${key}, to_timestamp(floor(extract(epoch from now()) / ${windowSeconds}) * ${windowSeconds}), 1)
+    on conflict (key, window_start) do update set count = rate_limits.count + 1
+    returning count, ceil(extract(epoch from window_start + make_interval(secs => ${windowSeconds}) - now()))::int as reset_in
+  `) as { count: number; reset_in: number }[];
+  // Occasionally drop old windows so the table stays small.
+  if (Math.random() < 0.02) await sql()`delete from rate_limits where window_start < now() - interval '1 day'`;
+  return { count: row.count, resetIn: row.reset_in };
+}
+
+/** Reads a counter without adding to it. */
+export async function peekCounter(key: string, windowSeconds: number): Promise<{ count: number; resetIn: number }> {
+  const [row] = (await sql()`
+    select count, ceil(extract(epoch from window_start + make_interval(secs => ${windowSeconds}) - now()))::int as reset_in
+    from rate_limits
+    where key = ${key} and window_start = to_timestamp(floor(extract(epoch from now()) / ${windowSeconds}) * ${windowSeconds})
+  `) as { count: number; reset_in: number }[];
+  return row ? { count: row.count, resetIn: row.reset_in } : { count: 0, resetIn: windowSeconds };
+}
+
+export class OrderBusyError extends Error {
+  constructor() {
+    super('Another request for this order is being processed.');
+  }
+}
+
+const LOCK_SECONDS = 30;
+const LOCK_ATTEMPTS = 10;
+const LOCK_RETRY_MS = 300;
+
+/**
+ * Runs `fn` while holding a per-order lock, so two requests for the same order
+ * can't both pass the quantity check. Waits up to ~3 s for the lock, then
+ * throws OrderBusyError. A lock left behind by a crashed request expires after
+ * LOCK_SECONDS.
+ */
+export async function withOrderLock<T>(instanceId: string, orderId: string, fn: () => Promise<T>): Promise<T> {
+  const token = crypto.randomUUID();
+  for (let attempt = 0; ; attempt++) {
+    const acquired = await sql()`
+      insert into order_locks (instance_id, order_id, token, locked_until)
+      values (${instanceId}, ${orderId}, ${token}, now() + make_interval(secs => ${LOCK_SECONDS}))
+      on conflict (instance_id, order_id) do update
+        set token = excluded.token, locked_until = excluded.locked_until
+        where order_locks.locked_until < now()
+      returning token`;
+    if ((acquired as unknown[]).length) break;
+    if (attempt + 1 >= LOCK_ATTEMPTS) throw new OrderBusyError();
+    await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_MS));
+  }
+  try {
+    return await fn();
+  } finally {
+    await sql()`delete from order_locks where instance_id = ${instanceId} and order_id = ${orderId} and token = ${token}`;
+  }
+}

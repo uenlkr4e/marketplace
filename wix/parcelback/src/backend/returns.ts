@@ -10,6 +10,8 @@ import {
   type ReturnRequest,
 } from '../shared/returns';
 import type { StoreSettings } from '../shared/settings';
+import { OrderBusyError } from './db';
+import type { Limited } from './limits';
 
 // Backend-only helpers. Wix calls here run with elevated permissions, so
 // customer-facing callers must verify the customer (order number + email)
@@ -29,6 +31,13 @@ export const json = (body: unknown, status = 200) =>
 // Customer-facing errors carry a code; the widget translates it and falls back to the English text.
 export const fail = (code: string, error: string, status: number) => json({ code, error }, status);
 
+/** 429 for a rate-limited caller, with Retry-After. */
+export function tooManyRequests({ retryAfter }: Limited): Response {
+  const response = fail('rate_limited', 'Too many attempts. Please wait a few minutes and try again.', 429);
+  response.headers.set('Retry-After', String(Math.max(1, retryAfter)));
+  return response;
+}
+
 export const NOT_FOUND = { code: 'order_not_found', error: 'We could not find an order matching those details.' };
 
 /** Logs unexpected errors server-side and returns a generic 500. */
@@ -37,6 +46,9 @@ export function withErrorHandling<A extends unknown[]>(name: string, handler: (.
     try {
       return await handler(...args);
     } catch (e) {
+      if (e instanceof OrderBusyError) {
+        return fail('order_busy', 'Another request for this order is being processed. Please try again.', 409);
+      }
       console.error(
         `[parcelback] ${name} failed:`,
         e instanceof Error ? (e.stack ?? e.message) : e,
