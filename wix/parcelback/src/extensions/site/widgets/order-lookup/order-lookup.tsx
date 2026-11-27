@@ -1,5 +1,6 @@
 import { httpClient } from '@wix/essentials';
 import { RETURN_REASONS } from '../../../../shared/returns';
+import { resolveLanguage, translator } from './i18n';
 
 type Shipment = {
   carrier: string | null;
@@ -19,6 +20,7 @@ type LookupResult = {
   returns: {
     eligible: boolean;
     reason: string | null;
+    reasonCode: string | null;
     windowEndsAt: string | null;
     requests: {
       kind: 'RETURN' | 'WITHDRAWAL';
@@ -28,25 +30,12 @@ type LookupResult = {
       rejectionReason: string | null;
     }[];
   };
-  withdrawal: { available: boolean; reason: string | null; periodEndsAt: string | null };
+  withdrawal: { available: boolean; reason: string | null; reasonCode: string | null; periodEndsAt: string | null };
 };
 
 type Mode = 'track' | 'withdraw';
 
 type Customer = { orderNumber: string; email: string };
-
-const DEFAULT_TITLE = 'Track your order';
-const GENERIC_ERROR = 'Something went wrong. Please try again.';
-const STATUS_LABELS: Record<string, string> = {
-  REQUESTED: 'Requested',
-  APPROVED: 'Approved, please send the items back',
-  REJECTED: 'Not approved',
-  RECEIVED: 'Received, refund in progress',
-  REFUNDING: 'Refund in progress',
-  REFUNDED: 'Refunded',
-};
-const WITHDRAWAL_STATUS_LABELS: Record<string, string> = { ...STATUS_LABELS, REQUESTED: 'Received' };
-const WITHDRAW_LABEL = 'Withdraw from contract here';
 
 const STYLES = `
   order-lookup { display: block; font: inherit; color: inherit; }
@@ -90,12 +79,32 @@ async function post(path: string, payload: unknown) {
 
 class OrderLookup extends HTMLElement {
   static get observedAttributes() {
-    return ['display-name', 'withdrawal-button'];
+    return ['display-name', 'withdrawal-button', 'language'];
+  }
+
+  // Widget setting "language" ("auto" or a code); auto follows the site's language.
+  private get locale() {
+    const setting = this.getAttribute('language');
+    return resolveLanguage(setting && setting !== 'auto' ? setting : null, document.documentElement.lang, navigator.language);
+  }
+
+  private get t() {
+    return translator(this.locale);
   }
 
   // EU withdrawal button, switched on in the widget settings.
   private get withdrawalEnabled() {
     return this.getAttribute('withdrawal-button') === 'true';
+  }
+
+  private date(iso: string) {
+    return new Date(iso).toLocaleDateString(this.locale);
+  }
+
+  /** Server messages come with a code; translate it, or show the server's English text. */
+  private message(code: string | null | undefined, fallback: string | null | undefined) {
+    const key = `error.${code}`;
+    return code && this.t.has(key) ? this.t(key) : (fallback ?? this.t('genericError'));
   }
 
   connectedCallback() {
@@ -107,72 +116,71 @@ class OrderLookup extends HTMLElement {
   }
 
   private mount(...children: Node[]) {
+    this.lang = this.locale; // screen readers and hyphenation
     this.replaceChildren(el('style', { textContent: STYLES }), el('div', { className: 'abo-card' }, children));
   }
 
   private renderForm(message = '', mode: Mode = 'track') {
-    const orderNumber = el('input', { name: 'orderNumber', placeholder: 'Order number', inputMode: 'numeric', required: true });
-    const email = el('input', { name: 'email', type: 'email', placeholder: 'Email used at checkout', required: true });
-    const submit = el('button', { type: 'submit', textContent: mode === 'withdraw' ? 'Continue' : 'Find my order' });
+    const t = this.t;
+    const orderNumber = el('input', { name: 'orderNumber', placeholder: t('orderNumber'), inputMode: 'numeric', required: true });
+    const email = el('input', { name: 'email', type: 'email', placeholder: t('email'), required: true });
+    const submit = el('button', { type: 'submit', textContent: mode === 'withdraw' ? t('continue') : t('findOrder') });
     const form = el('form', {}, [orderNumber, email, submit]);
     if (message) form.append(errorText(message));
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       submit.disabled = true;
-      submit.textContent = 'Searching…';
+      submit.textContent = t('searching');
       void this.lookup({ orderNumber: orderNumber.value, email: email.value }, mode);
     });
 
     if (mode === 'withdraw') {
-      const back = el('button', { type: 'button', className: 'abo-link', textContent: 'Back' });
+      const back = el('button', { type: 'button', className: 'abo-link', textContent: t('back') });
       back.addEventListener('click', () => this.renderForm());
       form.append(back);
-      this.mount(
-        el('h2', { textContent: 'Withdraw from contract' }),
-        el('p', { textContent: 'Enter your order number and the email you used at checkout to identify your order.' }),
-        form,
-      );
+      this.mount(el('h2', { textContent: t('withdrawTitle') }), el('p', { textContent: t('withdrawIntro') }), form);
       return;
     }
     if (this.withdrawalEnabled) {
-      const withdraw = el('button', { type: 'button', className: 'abo-link', textContent: WITHDRAW_LABEL });
+      const withdraw = el('button', { type: 'button', className: 'abo-link', textContent: t('withdrawLink') });
       withdraw.addEventListener('click', () => this.renderForm('', 'withdraw'));
       form.append(withdraw);
     }
-    this.mount(el('h2', { textContent: this.getAttribute('display-name') || DEFAULT_TITLE }), form);
+    this.mount(el('h2', { textContent: this.getAttribute('display-name') || t('title') }), form);
   }
 
   private async lookup(customer: Customer, mode: Mode = 'track') {
     try {
       const { ok, body } = await post('order-lookup', customer);
       if (!ok) {
-        this.renderForm(body.error ?? GENERIC_ERROR, mode);
+        this.renderForm(this.message(body.code, body.error), mode);
       } else if (mode === 'withdraw' && (body as LookupResult).withdrawal.available) {
         this.renderWithdrawalForm(customer, body as LookupResult);
       } else {
         this.renderResult(customer, body as LookupResult);
       }
     } catch {
-      this.renderForm(GENERIC_ERROR, mode);
+      this.renderForm(this.t('genericError'), mode);
     }
   }
 
   private renderResult(customer: Customer, order: LookupResult, notice?: Node) {
+    const t = this.t;
     const items = order.lineItems.map((i) => el('li', { textContent: `${i.name} × ${i.quantity}` }));
 
     const shipments = order.shipments.length
       ? order.shipments.map((s) => {
-          const label = [s.carrier, s.trackingNumber].filter(Boolean).join(' · ') || 'Shipped';
+          const label = [s.carrier, s.trackingNumber].filter(Boolean).join(' · ') || t('shipped');
           const li = el('li', { textContent: label });
           if (s.trackingLink?.startsWith('https://') || s.trackingLink?.startsWith('http://')) {
-            li.append(' — ', el('a', { href: s.trackingLink, target: '_blank', rel: 'noopener noreferrer', textContent: 'Track shipment' }));
+            li.append(' — ', el('a', { href: s.trackingLink, target: '_blank', rel: 'noopener noreferrer', textContent: t('trackShipment') }));
           }
           return li;
         })
-      : [el('li', { textContent: 'Not shipped yet.' })];
+      : [el('li', { textContent: t('notShipped') })];
 
-    const returnsSection: Node[] = [el('h3', { textContent: 'Returns' })];
+    const returnsSection: Node[] = [el('h3', { textContent: t('returns') })];
     if (notice) returnsSection.push(notice);
     if (order.returns.requests.length) {
       returnsSection.push(
@@ -180,60 +188,67 @@ class OrderLookup extends HTMLElement {
           'ul',
           {},
           order.returns.requests.map((r) => {
-            const labels = r.kind === 'WITHDRAWAL' ? WITHDRAWAL_STATUS_LABELS : STATUS_LABELS;
+            const withdrawal = r.kind === 'WITHDRAWAL';
+            const status =
+              withdrawal && r.status === 'REQUESTED' ? t('withdrawalStatusReceived') : t(`status.${r.status}`);
+            const reference = withdrawal ? t('withdrawalPrefix', { reference: r.rmaNumber }) : r.rmaNumber;
             const li = el('li', {
-              textContent: `${r.kind === 'WITHDRAWAL' ? 'Withdrawal ' : ''}${r.rmaNumber}: ${r.items.map((i) => `${i.name} × ${i.quantity}`).join(', ')} (${labels[r.status] ?? r.status})`,
+              textContent: `${reference}: ${r.items.map((i) => `${i.name} × ${i.quantity}`).join(', ')} (${status})`,
             });
             if (r.rejectionReason) {
-              li.append(el('br'), el('span', { className: 'abo-muted', textContent: `Reason: ${r.rejectionReason}` }));
+              li.append(el('br'), el('span', { className: 'abo-muted', textContent: t('rejectionReason', { reason: r.rejectionReason }) }));
             }
             return li;
           }),
         ),
       );
     }
+    const returnsReason = order.returns.reason ? this.message(order.returns.reasonCode, order.returns.reason) : null;
     if (order.returns.eligible) {
       if (order.returns.windowEndsAt) {
         returnsSection.push(
-          el('p', { className: 'abo-muted', textContent: `You can start a return until ${new Date(order.returns.windowEndsAt).toLocaleDateString()}.` }),
+          el('p', { className: 'abo-muted', textContent: t('returnUntil', { date: this.date(order.returns.windowEndsAt) }) }),
         );
       }
-      const start = el('button', { type: 'button', textContent: 'Start a return' });
+      const start = el('button', { type: 'button', textContent: t('startReturn') });
       start.addEventListener('click', () => this.renderReturnForm(customer, order));
       returnsSection.push(start);
-    } else if (order.returns.reason) {
-      returnsSection.push(el('p', { className: 'abo-muted', textContent: order.returns.reason }));
+    } else if (returnsReason) {
+      returnsSection.push(el('p', { className: 'abo-muted', textContent: returnsReason }));
     }
 
     const withdrawalSection: Node[] = [];
     if (this.withdrawalEnabled) {
+      const withdrawalReason = order.withdrawal.reason ? this.message(order.withdrawal.reasonCode, order.withdrawal.reason) : null;
       if (order.withdrawal.available) {
-        withdrawalSection.push(el('h3', { textContent: 'Withdrawal' }));
+        withdrawalSection.push(el('h3', { textContent: t('withdrawal') }));
         if (order.withdrawal.periodEndsAt) {
           withdrawalSection.push(
-            el('p', { className: 'abo-muted', textContent: `You can withdraw until ${new Date(order.withdrawal.periodEndsAt).toLocaleDateString()}.` }),
+            el('p', { className: 'abo-muted', textContent: t('withdrawUntil', { date: this.date(order.withdrawal.periodEndsAt) }) }),
           );
         }
-        const withdraw = el('button', { type: 'button', textContent: WITHDRAW_LABEL });
+        const withdraw = el('button', { type: 'button', textContent: t('withdrawLink') });
         withdraw.addEventListener('click', () => this.renderWithdrawalForm(customer, order));
         withdrawalSection.push(withdraw);
-      } else if (order.withdrawal.reason && order.withdrawal.reason !== order.returns.reason) {
+      } else if (withdrawalReason && withdrawalReason !== returnsReason) {
         withdrawalSection.push(
-          el('h3', { textContent: 'Withdrawal' }),
-          el('p', { className: 'abo-muted', textContent: order.withdrawal.reason }),
+          el('h3', { textContent: t('withdrawal') }),
+          el('p', { className: 'abo-muted', textContent: withdrawalReason }),
         );
       }
     }
 
-    const back = el('button', { type: 'button', textContent: 'Look up another order' });
+    const back = el('button', { type: 'button', textContent: t('lookupAnother') });
     back.addEventListener('click', () => this.renderForm());
 
+    const fulfillmentKey = `fulfillment.${order.fulfillmentStatus}`;
+    const status = t.has(fulfillmentKey) ? t(fulfillmentKey) : order.fulfillmentStatus;
     this.mount(
-      el('h2', { textContent: `Order #${order.number}` }),
-      el('p', { textContent: `Placed ${new Date(order.createdDate).toLocaleDateString()} · Status: ${order.fulfillmentStatus}` }),
-      el('h3', { textContent: 'Items' }),
+      el('h2', { textContent: t('orderHeading', { number: order.number }) }),
+      el('p', { textContent: t('placedStatus', { date: this.date(order.createdDate), status }) }),
+      el('h3', { textContent: t('items') }),
       el('ul', {}, items),
-      el('h3', { textContent: 'Shipments' }),
+      el('h3', { textContent: t('shipments') }),
       el('ul', {}, shipments),
       ...returnsSection,
       ...withdrawalSection,
@@ -243,26 +258,28 @@ class OrderLookup extends HTMLElement {
   }
 
   private renderReturnForm(customer: Customer, order: LookupResult, message = '') {
+    const t = this.t;
     const rows = order.lineItems
       .filter((i) => i.returnableQuantity > 0)
       .map((item) => {
         const quantity = el('select', { name: `qty-${item.id}` }, [
-          el('option', { value: '0', textContent: "Don't return" }),
+          el('option', { value: '0', textContent: t('dontReturn') }),
           ...Array.from({ length: item.returnableQuantity }, (_, n) =>
-            el('option', { value: String(n + 1), textContent: `Return ${n + 1}` }),
+            el('option', { value: String(n + 1), textContent: t('returnQty', { n: n + 1 }) }),
           ),
         ]);
         quantity.dataset.lineItemId = item.id;
         return { quantity, row: el('div', { className: 'abo-row' }, [el('label', { textContent: item.name }), quantity]) };
       });
 
+    // Option values stay English: they're stored and shown to the merchant.
     const reason = el('select', { name: 'reason', required: true }, [
-      el('option', { value: '', textContent: 'Reason for return' }),
-      ...RETURN_REASONS.map((r) => el('option', { value: r, textContent: r })),
+      el('option', { value: '', textContent: t('reasonPlaceholder') }),
+      ...RETURN_REASONS.map((r) => el('option', { value: r, textContent: t(`reason.${r}`) })),
     ]);
-    const note = el('textarea', { name: 'note', placeholder: 'Anything else we should know? (optional)', maxLength: 1000, rows: 3 });
-    const submit = el('button', { type: 'submit', textContent: 'Submit return request' });
-    const cancel = el('button', { type: 'button', textContent: 'Cancel' });
+    const note = el('textarea', { name: 'note', placeholder: t('notePlaceholder'), maxLength: 1000, rows: 3 });
+    const submit = el('button', { type: 'submit', textContent: t('submitReturn') });
+    const cancel = el('button', { type: 'button', textContent: t('cancel') });
     cancel.addEventListener('click', () => this.renderResult(customer, order));
 
     const form = el('form', {}, [...rows.map((r) => r.row), reason, note, submit, cancel]);
@@ -274,15 +291,15 @@ class OrderLookup extends HTMLElement {
         .map((r) => ({ lineItemId: r.quantity.dataset.lineItemId!, quantity: Number(r.quantity.value) }))
         .filter((i) => i.quantity > 0);
       if (!items.length) {
-        this.renderReturnForm(customer, order, 'Please choose at least one item to return.');
+        this.renderReturnForm(customer, order, t('chooseItemReturn'));
         return;
       }
       submit.disabled = true;
-      submit.textContent = 'Submitting…';
+      submit.textContent = t('submitting');
       void this.submitReturn(customer, order, { items, reason: reason.value, note: note.value });
     });
 
-    this.mount(el('h2', { textContent: `Return items from order #${order.number}` }), form);
+    this.mount(el('h2', { textContent: t('returnFormTitle', { number: order.number }) }), form);
   }
 
   private async submitReturn(
@@ -293,14 +310,12 @@ class OrderLookup extends HTMLElement {
     try {
       const { ok, body } = await post('return-request', { ...customer, ...request });
       if (!ok) {
-        this.renderReturnForm(customer, order, body.error ?? GENERIC_ERROR);
+        this.renderReturnForm(customer, order, this.message(body.code, body.error));
         return;
       }
       // Reload so quantities and the request list reflect the new return.
       const refreshed = await post('order-lookup', customer);
-      const confirmation = el('p', {
-        textContent: `Return request ${body.rmaNumber} received. The store will review it; you can check its status here any time.`,
-      });
+      const confirmation = el('p', { textContent: this.t('returnReceived', { reference: body.rmaNumber }) });
       confirmation.setAttribute('role', 'status');
       if (refreshed.ok) {
         this.renderResult(customer, refreshed.body as LookupResult, confirmation);
@@ -308,19 +323,20 @@ class OrderLookup extends HTMLElement {
         this.mount(confirmation);
       }
     } catch {
-      this.renderReturnForm(customer, order, GENERIC_ERROR);
+      this.renderReturnForm(customer, order, this.t('genericError'));
     }
   }
 
   private renderWithdrawalForm(customer: Customer, order: LookupResult, message = '') {
+    const t = this.t;
     // Everything still open is preselected; the customer can narrow it down.
     const rows = order.lineItems
       .filter((i) => i.withdrawableQuantity > 0)
       .map((item) => {
         const quantity = el('select', { name: `qty-${item.id}` }, [
-          el('option', { value: '0', textContent: 'Keep' }),
+          el('option', { value: '0', textContent: t('keep') }),
           ...Array.from({ length: item.withdrawableQuantity }, (_, n) =>
-            el('option', { value: String(n + 1), textContent: `Withdraw ${n + 1}` }),
+            el('option', { value: String(n + 1), textContent: t('withdrawQty', { n: n + 1 }) }),
           ),
         ]);
         quantity.value = String(item.withdrawableQuantity);
@@ -328,16 +344,16 @@ class OrderLookup extends HTMLElement {
         return { quantity, row: el('div', { className: 'abo-row' }, [el('label', { textContent: item.name }), quantity]) };
       });
 
-    const name = el('input', { name: 'name', placeholder: 'Your full name', value: order.customerName, required: true, maxLength: 200 });
-    const note = el('textarea', { name: 'note', placeholder: 'Comment (optional)', maxLength: 1000, rows: 3 });
-    const submit = el('button', { type: 'submit', textContent: 'Confirm withdrawal here' });
-    const cancel = el('button', { type: 'button', textContent: 'Cancel' });
+    const name = el('input', { name: 'name', placeholder: t('namePlaceholder'), value: order.customerName, required: true, maxLength: 200 });
+    const note = el('textarea', { name: 'note', placeholder: t('commentPlaceholder'), maxLength: 1000, rows: 3 });
+    const submit = el('button', { type: 'submit', textContent: t('confirmWithdrawal') });
+    const cancel = el('button', { type: 'button', textContent: t('cancel') });
     cancel.addEventListener('click', () => this.renderResult(customer, order));
 
     const form = el('form', {}, [
       ...rows.map((r) => r.row),
       name,
-      el('p', { className: 'abo-muted', textContent: `The confirmation will be sent to ${customer.email}.` }),
+      el('p', { className: 'abo-muted', textContent: t('confirmationTo', { email: customer.email }) }),
       note,
       submit,
       cancel,
@@ -350,17 +366,17 @@ class OrderLookup extends HTMLElement {
         .map((r) => ({ lineItemId: r.quantity.dataset.lineItemId!, quantity: Number(r.quantity.value) }))
         .filter((i) => i.quantity > 0);
       if (!items.length) {
-        this.renderWithdrawalForm(customer, order, 'Please choose at least one item.');
+        this.renderWithdrawalForm(customer, order, t('chooseItem'));
         return;
       }
       submit.disabled = true;
-      submit.textContent = 'Submitting…';
+      submit.textContent = t('submitting');
       void this.submitWithdrawal(customer, order, { items, name: name.value, note: note.value });
     });
 
     this.mount(
-      el('h2', { textContent: 'Withdraw from contract' }),
-      el('p', { textContent: `Order #${order.number}, placed ${new Date(order.createdDate).toLocaleDateString()}. You don’t need to give a reason.` }),
+      el('h2', { textContent: t('withdrawTitle') }),
+      el('p', { textContent: t('withdrawFormIntro', { number: order.number, date: this.date(order.createdDate) }) }),
       form,
     );
   }
@@ -370,28 +386,29 @@ class OrderLookup extends HTMLElement {
     order: LookupResult,
     request: { items: { lineItemId: string; quantity: number }[]; name: string; note: string },
   ) {
+    const t = this.t;
     try {
       const { ok, body } = await post('withdrawal', { ...customer, ...request });
       if (!ok) {
-        this.renderWithdrawalForm(customer, order, body.error ?? GENERIC_ERROR);
+        this.renderWithdrawalForm(customer, order, this.message(body.code, body.error));
         return;
       }
       const receipt = body as { reference: string; submittedAt: string; items: { name: string; quantity: number }[] };
-      const submittedAt = new Date(receipt.submittedAt).toLocaleString(undefined, { dateStyle: 'long', timeStyle: 'short' });
-      const confirmation = el('p', { textContent: `We received your withdrawal from order #${order.number} on ${submittedAt}.` });
+      const submittedAt = new Date(receipt.submittedAt).toLocaleString(this.locale, { dateStyle: 'long', timeStyle: 'short' });
+      const confirmation = el('p', { textContent: t('withdrawalReceivedText', { number: order.number, date: submittedAt }) });
       confirmation.setAttribute('role', 'status');
-      const back = el('button', { type: 'button', textContent: 'Back to my order' });
+      const back = el('button', { type: 'button', textContent: t('backToOrder') });
       back.addEventListener('click', () => void this.lookup(customer));
       this.mount(
-        el('h2', { textContent: 'Withdrawal received' }),
+        el('h2', { textContent: t('withdrawalReceivedTitle') }),
         confirmation,
-        el('p', { textContent: `Reference: ${receipt.reference}` }),
+        el('p', { textContent: t('reference', { reference: receipt.reference }) }),
         el('ul', {}, receipt.items.map((i) => el('li', { textContent: `${i.name} × ${i.quantity}` }))),
-        el('p', { className: 'abo-muted', textContent: `A confirmation has been sent to ${customer.email}. The store will tell you how to send the items back.` }),
+        el('p', { className: 'abo-muted', textContent: t('withdrawalNext', { email: customer.email }) }),
         back,
       );
     } catch {
-      this.renderWithdrawalForm(customer, order, GENERIC_ERROR);
+      this.renderWithdrawalForm(customer, order, t('genericError'));
     }
   }
 }

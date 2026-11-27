@@ -26,7 +26,10 @@ type Fulfillment = orderFulfillments.Fulfillment;
 export const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
-export const NOT_FOUND = { error: 'We could not find an order matching those details.' };
+// Customer-facing errors carry a code; the widget translates it and falls back to the English text.
+export const fail = (code: string, error: string, status: number) => json({ code, error }, status);
+
+export const NOT_FOUND = { code: 'order_not_found', error: 'We could not find an order matching those details.' };
 
 /** Logs unexpected errors server-side and returns a generic 500. */
 export function withErrorHandling<A extends unknown[]>(name: string, handler: (...args: A) => Promise<Response>) {
@@ -39,7 +42,7 @@ export function withErrorHandling<A extends unknown[]>(name: string, handler: (.
         e instanceof Error ? (e.stack ?? e.message) : e,
         (e as { details?: unknown })?.details ?? '',
       );
-      return json({ error: 'Something went wrong. Please try again.' }, 500);
+      return fail('server_error', 'Something went wrong. Please try again.', 500);
     }
   };
 }
@@ -104,6 +107,7 @@ export function buildItems(order: Order, wanted: Map<string, number>, returnable
 
 export type Eligibility = {
   eligible: boolean;
+  code?: string; // translatable form of `reason`
   reason?: string;
   windowEndsAt?: string;
   returnable: Record<string, number>; // lineItemId -> quantity still returnable
@@ -146,7 +150,12 @@ export function checkEligibility(
   const returnable = returnableQuantities(order, requests);
 
   if (!['PAID', 'PARTIALLY_REFUNDED'].includes(String(order.paymentStatus))) {
-    return { eligible: false, reason: 'This order can’t be returned online. Please contact the store.', returnable };
+    return {
+      eligible: false,
+      code: 'not_returnable_online',
+      reason: 'This order can’t be returned online. Please contact the store.',
+      returnable,
+    };
   }
 
   const shipDates = shipmentTimes(fulfillments);
@@ -154,11 +163,18 @@ export function checkEligibility(
   const windowEndsAt = new Date(start + RETURN_WINDOW_DAYS * DAY_MS).toISOString();
 
   if (now.toISOString() > windowEndsAt) {
-    return { eligible: false, reason: 'The return window for this order has closed.', windowEndsAt, returnable };
+    return {
+      eligible: false,
+      code: 'return_window_closed',
+      reason: 'The return window for this order has closed.',
+      windowEndsAt,
+      returnable,
+    };
   }
   if (!Object.values(returnable).some((q) => q > 0)) {
     return {
       eligible: false,
+      code: 'nothing_left',
       reason: 'All items in this order already have a return, withdrawal or refund.',
       windowEndsAt,
       returnable,
@@ -184,7 +200,12 @@ export function checkWithdrawal(
   const returnable = returnableQuantities(order, requests);
 
   if (order.status === 'CANCELED' || ['FULLY_REFUNDED', 'CANCELED', 'DECLINED'].includes(String(order.paymentStatus))) {
-    return { eligible: false, reason: 'This order has already been cancelled or refunded.', returnable };
+    return {
+      eligible: false,
+      code: 'order_cancelled',
+      reason: 'This order has already been cancelled or refunded.',
+      returnable,
+    };
   }
 
   let windowEndsAt: string | undefined;
@@ -195,12 +216,19 @@ export function checkWithdrawal(
     const days = WITHDRAWAL_PERIOD_DAYS + WITHDRAWAL_DELIVERY_BUFFER_DAYS;
     windowEndsAt = new Date(start + days * DAY_MS).toISOString();
     if (now.toISOString() > windowEndsAt) {
-      return { eligible: false, reason: 'The withdrawal period for this order has ended.', windowEndsAt, returnable };
+      return {
+        eligible: false,
+        code: 'withdrawal_period_ended',
+        reason: 'The withdrawal period for this order has ended.',
+        windowEndsAt,
+        returnable,
+      };
     }
   }
   if (!Object.values(returnable).some((q) => q > 0)) {
     return {
       eligible: false,
+      code: 'nothing_left',
       reason: 'All items in this order already have a return, withdrawal or refund.',
       windowEndsAt,
       returnable,

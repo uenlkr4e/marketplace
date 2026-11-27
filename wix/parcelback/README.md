@@ -71,6 +71,17 @@ Directive (EU) 2023/2673 requires online stores selling to EU consumers to offer
   - Rejecting one shows a warning that only an ended period or exempt goods justify it.
   - **Export CSV** downloads all requests with their status history as the audit trail.
 
+## Languages
+
+The site widget is translated into **English, German, French, Spanish, Italian, Dutch and (European) Portuguese** (`src/extensions/site/widgets/order-lookup/i18n.ts`).
+
+- **Choosing the language:** the widget setting **Language** defaults to *Site language (automatic)*, which follows the site's `<html lang>` and then the visitor's browser. Unsupported languages fall back to English. Merchants can also pin a language.
+- **Server messages:** customer-facing errors and eligibility messages carry a `code` (e.g. `order_not_found`, `withdrawal_period_ended`). The widget translates the code and falls back to the English `error` text.
+- **Return reasons:** the values stay English, because that's what is stored and shown to the merchant. Only the labels are translated.
+- **Heading:** an empty heading shows "Track your order" in the widget's language. A custom heading is shown as typed.
+- **Not translated yet:** the dashboard (merchant-facing, English) and the customer emails. Merchants edit the emails in Wix Automations, so per-language versions are up to them for now.
+- The withdrawal button labels are meant to match each language version of the directive. **Check them against the official texts in the legal review.**
+
 ## Setup
 
 1. Permissions: Wix Stores **Read Orders** and **Manage Orders** (Wix Data permissions were removed).
@@ -104,6 +115,12 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [x] Editor widget settings: "EU withdrawal button" toggle (off by default) shows and hides the "Withdraw from contract here" link immediately
 - [x] Acknowledgement email received in a real inbox with all details filled in
 
+**Languages (2026-11-27):**
+
+- [x] German in the editor: form, translated "order not found" error from its code, order view (statuses, fulfillment status, "nothing left" message, dates as 27.11.2026)
+- [x] French: order view, return form (reasons, quantities), withdrawal form (rendered with sample data, not submitted)
+- [x] Editor settings: Language dropdown switches the widget immediately; left on automatic
+
 **Returns (2026-11-26, Neon backend):**
 
 
@@ -119,7 +136,8 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [ ] Refund modal UI on a fresh request (its `/merchant/refund-plan` call wasn't exercised through the UI after the migration)
 - [ ] Automatic card refund (needs an order paid through a refundable provider)
 - [ ] Two simultaneous *requests* (returns or withdrawals) for the same items can both pass the quantity check (refunds are protected; requests aren't yet)
-- [ ] EU withdrawal: legal review of the flow and wording; translated UI (DE/FR/ES…); a model withdrawal form link
+- [ ] EU withdrawal: legal review of the flow and wording (including the translated button labels); a model withdrawal form link
+- [ ] Translations were written without a native-speaker review; customer emails and the dashboard are English only
 - [ ] Rate limiting for public endpoints (Neon can hold the counters now)
 - [ ] Settings page (return window, reasons), partial-quantity refunds, multi-payment orders, shipping refunds
 - [ ] Rotate the Neon password (it was shared in a chat) and re-run `wix app env set`

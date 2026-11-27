@@ -6,6 +6,7 @@ import {
   checkEligibility,
   findCustomerOrder,
   getFulfillments,
+  fail,
   json,
   parseCustomer,
   parseItems,
@@ -30,28 +31,28 @@ export const POST: APIRoute = withErrorHandling('return-request', async ({ reque
   try {
     body = await request.json();
   } catch {
-    return json({ error: 'Invalid request.' }, 400);
+    return fail('invalid_request', 'Invalid request.', 400);
   }
 
   const customer = parseCustomer(body);
   if (!customer) {
-    return json({ error: 'Please enter a valid order number and email.' }, 400);
+    return fail('invalid_customer', 'Please enter a valid order number and email.', 400);
   }
 
   const reason = String(body.reason ?? '');
   if (!(RETURN_REASONS as readonly string[]).includes(reason)) {
-    return json({ error: 'Please choose a reason for the return.' }, 400);
+    return fail('reason_required', 'Please choose a reason for the return.', 400);
   }
   const customerNote = String(body.note ?? '').trim().slice(0, 1000);
 
   const wanted = parseItems(body.items);
   if (!wanted.size) {
-    return json({ error: 'Please choose at least one item to return.' }, 400);
+    return fail('items_required', 'Please choose at least one item to return.', 400);
   }
 
   const caller = await getCaller();
   if (!caller) {
-    return json({ error: 'Invalid request.' }, 401);
+    return fail('invalid_request', 'Invalid request.', 401);
   }
 
   const order = await findCustomerOrder(customer.orderNumber, customer.email);
@@ -65,12 +66,12 @@ export const POST: APIRoute = withErrorHandling('return-request', async ({ reque
   ]);
   const eligibility = checkEligibility(order, fulfillments, existing);
   if (!eligibility.eligible) {
-    return json({ error: eligibility.reason }, 409);
+    return json({ code: eligibility.code, error: eligibility.reason }, 409);
   }
 
   const items = buildItems(order, wanted, eligibility.returnable);
   if (!items) {
-    return json({ error: 'One of the selected items can’t be returned in that quantity.' }, 409);
+    return fail('quantity_unavailable', 'One of the selected items can’t be returned in that quantity.', 409);
   }
 
   const saved = await insertRequest(caller.instanceId, {

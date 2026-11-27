@@ -6,6 +6,7 @@ import {
   checkWithdrawal,
   findCustomerOrder,
   getFulfillments,
+  fail,
   json,
   parseCustomer,
 } from '../backend/returns';
@@ -27,15 +28,15 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
   try {
     customer = parseCustomer(await request.json());
   } catch {
-    return json({ error: 'Invalid request.' }, 400);
+    return fail('invalid_request', 'Invalid request.', 400);
   }
   if (!customer) {
-    return json({ error: 'Please enter a valid order number and email.' }, 400);
+    return fail('invalid_customer', 'Please enter a valid order number and email.', 400);
   }
 
   const caller = await getCaller();
   if (!caller) {
-    return json({ error: 'Invalid request.' }, 401);
+    return fail('invalid_request', 'Invalid request.', 401);
   }
 
   const order = await findCustomerOrder(customer.orderNumber, customer.email);
@@ -77,6 +78,7 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
     returns: {
       eligible: eligibility.eligible,
       reason: eligibility.reason ?? null,
+      reasonCode: eligibility.code ?? null,
       windowEndsAt: eligibility.windowEndsAt ?? null,
       requests: requests.map((r) => ({
         kind: r.kind,
@@ -90,6 +92,7 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
     withdrawal: {
       available: withdrawal.eligible,
       reason: withdrawal.reason ?? null,
+      reasonCode: withdrawal.code ?? null,
       periodEndsAt: withdrawal.windowEndsAt ?? null,
     },
   });

@@ -6,6 +6,7 @@ import {
   checkWithdrawal,
   findCustomerOrder,
   getFulfillments,
+  fail,
   json,
   parseCustomer,
   parseItems,
@@ -29,22 +30,22 @@ export const POST: APIRoute = withErrorHandling('withdrawal', async ({ request }
   try {
     body = await request.json();
   } catch {
-    return json({ error: 'Invalid request.' }, 400);
+    return fail('invalid_request', 'Invalid request.', 400);
   }
 
   const customer = parseCustomer(body);
   if (!customer) {
-    return json({ error: 'Please enter a valid order number and email.' }, 400);
+    return fail('invalid_customer', 'Please enter a valid order number and email.', 400);
   }
   const name = String(body.name ?? '').trim();
   if (!name || name.length > 200) {
-    return json({ error: 'Please enter your name.' }, 400);
+    return fail('name_required', 'Please enter your name.', 400);
   }
   const customerNote = String(body.note ?? '').trim().slice(0, 1000);
 
   const caller = await getCaller();
   if (!caller) {
-    return json({ error: 'Invalid request.' }, 401);
+    return fail('invalid_request', 'Invalid request.', 401);
   }
 
   const order = await findCustomerOrder(customer.orderNumber, customer.email);
@@ -58,7 +59,7 @@ export const POST: APIRoute = withErrorHandling('withdrawal', async ({ request }
   ]);
   const eligibility = checkWithdrawal(order, fulfillments, existing);
   if (!eligibility.eligible) {
-    return json({ error: eligibility.reason }, 409);
+    return json({ code: eligibility.code, error: eligibility.reason }, 409);
   }
 
   const chosen = parseItems(body.items);
@@ -67,7 +68,7 @@ export const POST: APIRoute = withErrorHandling('withdrawal', async ({ request }
     : new Map(Object.entries(eligibility.returnable).filter(([, quantity]) => quantity > 0));
   const items = buildItems(order, wanted, eligibility.returnable);
   if (!items) {
-    return json({ error: 'One of the selected items is no longer open for withdrawal.' }, 409);
+    return fail('withdrawal_items_unavailable', 'One of the selected items is no longer open for withdrawal.', 409);
   }
 
   const saved = await insertRequest(caller.instanceId, {
