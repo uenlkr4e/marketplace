@@ -12,7 +12,7 @@ import { orderFulfillments } from '@wix/ecom';
 export default orderFulfillments.onFulfillmentsUpdated((event) => {
   const { orderId, fulfillments } = event.entity;
 
-  console.log('[after-buy-ops] fulfillments updated', {
+  console.log('[parcelback] fulfillments updated', {
     eventId: event.metadata?._id,
     orderId,
     fulfillments: (fulfillments ?? []).map((f) => ({

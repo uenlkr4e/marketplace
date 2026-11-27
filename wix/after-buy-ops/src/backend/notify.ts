@@ -21,7 +21,7 @@ const reportEvent = auth.elevate(activations.reportEvent);
  */
 export async function notifyCustomer(event: ReturnEvent, request: ReturnRequest): Promise<void> {
   if (!request.contactId) {
-    console.warn(`[after-buy-ops] ${event}: no contact ID for ${request.rmaNumber}; email skipped`);
+    console.warn(`[parcelback] ${event}: no contact ID for ${request.rmaNumber}; email skipped`);
     return;
   }
   try {
@@ -39,6 +39,6 @@ export async function notifyCustomer(event: ReturnEvent, request: ReturnRequest)
       idempotency: { key: `${request.id}:${event}` },
     });
   } catch (e) {
-    console.error(`[after-buy-ops] ${event} for ${request.rmaNumber} not reported:`, e instanceof Error ? e.message : e);
+    console.error(`[parcelback] ${event} for ${request.rmaNumber} not reported:`, e instanceof Error ? e.message : e);
   }
 }

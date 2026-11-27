@@ -1,6 +1,8 @@
-# after-buy-ops
+# Parcelback: Returns & Order Tracking
 
 Wix CLI app for order tracking, returns and the EU withdrawal function. Spec: `../../docs/wix-post-purchase-suite-spec.md`.
+
+> Formerly "AfterBuy Ops". The Wix namespace `@uenlkr4e/after-buy-ops` and `projectId` in `wix.config.mjs` keep the old name: Wix doesn't allow changing them, and customers never see them.
 
 ## Architecture
 

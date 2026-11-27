@@ -32,7 +32,7 @@ export function withErrorHandling<A extends unknown[]>(name: string, handler: (.
       return await handler(...args);
     } catch (e) {
       console.error(
-        `[after-buy-ops] ${name} failed:`,
+        `[parcelback] ${name} failed:`,
         e instanceof Error ? (e.stack ?? e.message) : e,
         (e as { details?: unknown })?.details ?? '',
       );

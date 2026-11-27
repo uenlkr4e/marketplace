@@ -1,6 +1,6 @@
 # Wix post-purchase suite: product spec & MVP plan
 
-_Working name: **Afterbuy** (placeholder; check trademark before use). Drafted 2026-11-26._
+_Name: **Parcelback: Returns & Order Tracking** (checked 2026-11-27: not used on the Wix App Market, no matching EU/US trademark found in TMview; parcelback.app and .io were free, .com is taken). Drafted 2026-11-26._
 
 ## 1. Problem
 

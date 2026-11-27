@@ -1,8 +1,8 @@
 # Customer emails: wording and remaining setup
 
-Emails go through **Wix Automations**. The app reports `return_requested`, `return_approved` and `return_rejected` (see `src/backend/notify.ts`). Each automation is "AfterBuy Ops trigger → Send an email", and Wix sends it to the trigger's contact (`contact_id`).
+Emails go through **Wix Automations**. The app reports `return_requested`, `return_approved` and `return_rejected` (see `src/backend/notify.ts`). Each automation is "Parcelback trigger → Send an email", and Wix sends it to the trigger's contact (`contact_id`).
 
-Variables below refer to the trigger fields. In Wix's email editor, insert them with **+ Add variable → AfterBuy Ops**.
+Variables below refer to the trigger fields. In Wix's email editor, insert them with **+ Add variable → Parcelback**.
 
 ## 1. Return requested
 

@@ -1,4 +1,4 @@
--- after-buy-ops database schema (Neon Postgres).
+-- Parcelback database schema (Neon Postgres).
 -- Idempotent: safe to run repeatedly with `npm run db:migrate`.
 
 create table if not exists return_requests (
