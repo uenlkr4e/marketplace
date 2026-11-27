@@ -9,8 +9,9 @@ Wix CLI app for order tracking, returns and the EU withdrawal function. Spec: `.
 ```
 Site widget (order-lookup)      ──►  POST /order-lookup, POST /return-request,       (customer; order number + email)
                                      POST /withdrawal
-Dashboard page (Returns)        ──►  /merchant/returns, /merchant/return-action,     (Wix USER tokens only)
-                                     /merchant/refund-plan, /merchant/refund
+Dashboard pages (Returns,       ──►  /merchant/returns, /merchant/return-action,     (Wix USER tokens only)
+  Settings)                          /merchant/refund-plan, /merchant/refund,
+                                     /merchant/settings
                                           │                 │
                                           ▼                 ▼
                               Neon Postgres (EU)     Wix eCommerce APIs (orders, fulfillments, refunds; elevated)
@@ -48,7 +49,8 @@ REQUESTED ── approve ──► APPROVED ── receive ──► RECEIVED
     └── reject ──► REJECTED          └──────── refund ───────┴──► REFUNDING ──► REFUNDED
 ```
 
-- **Eligibility** (`src/backend/returns.ts`): the order must be paid or partially refunded. The window is 30 days from the first shipment, or from the order date if nothing has shipped. Returnable quantity = ordered − refunded (per Wix) − quantities held by open requests.
+- **Eligibility** (`src/backend/returns.ts`): the store must accept returns, and the order must be paid or partially refunded. The window (30 days by default) runs from the first shipment, or from the order date if nothing has shipped. Returnable quantity = ordered − refunded (per Wix) − quantities held by open requests.
+- **Settings page** (`store_settings` table, `src/shared/settings.ts`): accept returns on/off, return window (1–365 days), return reasons (any of the six built-in ones, which the widget translates, plus up to five custom ones shown as typed). Stores that never saved settings get the defaults. The server validates the same rules as the dashboard, and `/return-request` only accepts the store's current reasons. Not yet: product exclusions (final sale).
 - **Refund:**
   - If the provider can refund the payment: automatic refund to the original payment method.
   - Otherwise (e.g. offline payments): the refund is recorded in Wix (`externalRefund`) and the merchant sends the money themselves.
@@ -115,6 +117,13 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [x] Editor widget settings: "EU withdrawal button" toggle (off by default) shows and hides the "Withdraw from contract here" link immediately
 - [x] Acknowledgement email received in a real inbox with all details filled in
 
+**Settings page (2026-11-27):**
+
+- [x] Defaults load for a store without saved settings; a window of 0 is rejected (Save disabled); duplicate custom reasons are rejected regardless of case
+- [x] Saved 14 days, "Other" off, custom "Arrived too late": survives a reload; the lookup response has the new reasons and a window of order date + 14 days; the German form translates the built-in reasons and shows the custom one as typed
+- [x] Accept returns off: the widget shows "This store doesn't accept returns online" (code `returns_disabled`)
+- [x] Dev site restored to the defaults afterwards
+
 **Languages (2026-11-27):**
 
 - [x] German in the editor: form, translated "order not found" error from its code, order view (statuses, fulfillment status, "nothing left" message, dates as 27.11.2026)
@@ -139,6 +148,6 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [ ] EU withdrawal: legal review of the flow and wording (including the translated button labels); a model withdrawal form link
 - [ ] Translations were written without a native-speaker review; customer emails and the dashboard are English only
 - [ ] Rate limiting for public endpoints (Neon can hold the counters now)
-- [ ] Settings page (return window, reasons), partial-quantity refunds, multi-payment orders, shipping refunds
+- [ ] Product exclusions (final sale) on the Settings page; partial-quantity refunds, multi-payment orders, shipping refunds
 - [ ] Rotate the Neon password (it was shared in a chat) and re-run `wix app env set`
 - [ ] Thank-you page plugin slot isn't offered by `wix app generate` yet

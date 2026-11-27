@@ -2,7 +2,6 @@ import { auth } from '@wix/essentials';
 import { orderBilling, orders, orderFulfillments } from '@wix/ecom';
 import {
   ACTIVE_STATUSES,
-  RETURN_WINDOW_DAYS,
   WITHDRAWAL_DELIVERY_BUFFER_DAYS,
   WITHDRAWAL_PERIOD_DAYS,
   roundMoney,
@@ -10,6 +9,7 @@ import {
   type ReturnItem,
   type ReturnRequest,
 } from '../shared/returns';
+import type { StoreSettings } from '../shared/settings';
 
 // Backend-only helpers. Wix calls here run with elevated permissions, so
 // customer-facing callers must verify the customer (order number + email)
@@ -136,18 +136,29 @@ function returnableQuantities(order: Order, requests: ReturnRequest[]): Record<s
 }
 
 /**
- * MVP rules:
+ * Return rules:
+ * - the store accepts returns (Settings page)
  * - the order must be paid (or partially refunded)
- * - the window runs RETURN_WINDOW_DAYS from the first shipment, or from the order date if nothing shipped
+ * - the window runs settings.returnWindowDays from the first shipment, or from the order date if nothing shipped
  * - quantity: see returnableQuantities
  */
 export function checkEligibility(
   order: Order,
   fulfillments: Fulfillment[],
   requests: ReturnRequest[],
+  settings: StoreSettings,
   now = new Date(),
 ): Eligibility {
   const returnable = returnableQuantities(order, requests);
+
+  if (!settings.acceptReturns) {
+    return {
+      eligible: false,
+      code: 'returns_disabled',
+      reason: 'This store doesn’t accept returns online. Please contact the store.',
+      returnable,
+    };
+  }
 
   if (!['PAID', 'PARTIALLY_REFUNDED'].includes(String(order.paymentStatus))) {
     return {
@@ -160,7 +171,7 @@ export function checkEligibility(
 
   const shipDates = shipmentTimes(fulfillments);
   const start = shipDates.length ? Math.min(...shipDates) : new Date(order._createdDate ?? now).getTime();
-  const windowEndsAt = new Date(start + RETURN_WINDOW_DAYS * DAY_MS).toISOString();
+  const windowEndsAt = new Date(start + settings.returnWindowDays * DAY_MS).toISOString();
 
   if (now.toISOString() > windowEndsAt) {
     return {

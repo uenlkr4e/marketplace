@@ -13,8 +13,8 @@ import {
 } from '../backend/returns';
 import { getCaller } from '../backend/caller';
 import { notifyCustomer } from '../backend/notify';
-import { insertRequest, listForOrder } from '../backend/db';
-import { RETURN_REASONS, roundMoney } from '../shared/returns';
+import { getSettings, insertRequest, listForOrder } from '../backend/db';
+import { roundMoney } from '../shared/returns';
 
 /**
  * POST /return-request
@@ -40,9 +40,6 @@ export const POST: APIRoute = withErrorHandling('return-request', async ({ reque
   }
 
   const reason = String(body.reason ?? '');
-  if (!(RETURN_REASONS as readonly string[]).includes(reason)) {
-    return fail('reason_required', 'Please choose a reason for the return.', 400);
-  }
   const customerNote = String(body.note ?? '').trim().slice(0, 1000);
 
   const wanted = parseItems(body.items);
@@ -55,6 +52,11 @@ export const POST: APIRoute = withErrorHandling('return-request', async ({ reque
     return fail('invalid_request', 'Invalid request.', 401);
   }
 
+  const settings = await getSettings(caller.instanceId);
+  if (!settings.returnReasons.includes(reason)) {
+    return fail('reason_required', 'Please choose a reason for the return.', 400);
+  }
+
   const order = await findCustomerOrder(customer.orderNumber, customer.email);
   if (!order?._id) {
     return json(NOT_FOUND, 404);
@@ -64,7 +66,7 @@ export const POST: APIRoute = withErrorHandling('return-request', async ({ reque
     getFulfillments(order._id),
     listForOrder(caller.instanceId, order._id),
   ]);
-  const eligibility = checkEligibility(order, fulfillments, existing);
+  const eligibility = checkEligibility(order, fulfillments, existing, settings);
   if (!eligibility.eligible) {
     return json({ code: eligibility.code, error: eligibility.reason }, 409);
   }

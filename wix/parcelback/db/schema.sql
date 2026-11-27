@@ -38,3 +38,12 @@ alter table return_requests add column if not exists kind text not null default 
 alter table return_requests add column if not exists customer_name text;
 alter table return_requests drop constraint if exists return_requests_kind_check;
 alter table return_requests add constraint return_requests_kind_check check (kind in ('RETURN', 'WITHDRAWAL'));
+
+-- Per-store settings (Settings page). A missing row means the defaults in src/shared/settings.ts. (added 2026-11-27)
+create table if not exists store_settings (
+  instance_id text primary key,
+  accept_returns boolean not null default true,
+  return_window_days integer not null default 30 check (return_window_days between 1 and 365),
+  return_reasons jsonb not null,
+  updated_at timestamptz not null default now()
+);

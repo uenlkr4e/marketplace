@@ -1,5 +1,4 @@
 import { httpClient } from '@wix/essentials';
-import { RETURN_REASONS } from '../../../../shared/returns';
 import { resolveLanguage, translator } from './i18n';
 
 type Shipment = {
@@ -22,6 +21,7 @@ type LookupResult = {
     reason: string | null;
     reasonCode: string | null;
     windowEndsAt: string | null;
+    reasons: string[]; // the store's reasons (Settings page)
     requests: {
       kind: 'RETURN' | 'WITHDRAWAL';
       rmaNumber: string;
@@ -272,10 +272,13 @@ class OrderLookup extends HTMLElement {
         return { quantity, row: el('div', { className: 'abo-row' }, [el('label', { textContent: item.name }), quantity]) };
       });
 
-    // Option values stay English: they're stored and shown to the merchant.
+    // Option values stay as saved (built-in ones in English): they're stored and shown to the merchant.
+    // Built-in reasons are translated; the store's custom reasons are shown as typed.
     const reason = el('select', { name: 'reason', required: true }, [
       el('option', { value: '', textContent: t('reasonPlaceholder') }),
-      ...RETURN_REASONS.map((r) => el('option', { value: r, textContent: t(`reason.${r}`) })),
+      ...order.returns.reasons.map((r) =>
+        el('option', { value: r, textContent: t.has(`reason.${r}`) ? t(`reason.${r}`) : r }),
+      ),
     ]);
     const note = el('textarea', { name: 'note', placeholder: t('notePlaceholder'), maxLength: 1000, rows: 3 });
     const submit = el('button', { type: 'submit', textContent: t('submitReturn') });

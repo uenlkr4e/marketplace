@@ -11,7 +11,7 @@ import {
   parseCustomer,
 } from '../backend/returns';
 import { getCaller } from '../backend/caller';
-import { listForOrder } from '../backend/db';
+import { getSettings, listForOrder } from '../backend/db';
 
 /**
  * POST /order-lookup  { orderNumber, email }
@@ -44,11 +44,12 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
     return json(NOT_FOUND, 404);
   }
 
-  const [fulfillments, requests] = await Promise.all([
+  const [fulfillments, requests, settings] = await Promise.all([
     getFulfillments(order._id),
     listForOrder(caller.instanceId, order._id),
+    getSettings(caller.instanceId),
   ]);
-  const eligibility = checkEligibility(order, fulfillments, requests);
+  const eligibility = checkEligibility(order, fulfillments, requests, settings);
   const withdrawal = checkWithdrawal(order, fulfillments, requests);
   const contact = order.billingInfo?.contactDetails;
 
@@ -80,6 +81,7 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
       reason: eligibility.reason ?? null,
       reasonCode: eligibility.code ?? null,
       windowEndsAt: eligibility.windowEndsAt ?? null,
+      reasons: settings.returnReasons,
       requests: requests.map((r) => ({
         kind: r.kind,
         rmaNumber: r.rmaNumber,

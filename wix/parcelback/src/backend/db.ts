@@ -1,7 +1,8 @@
 import { neon } from '@neondatabase/serverless';
 import type { HistoryEntry, RequestKind, ReturnItem, ReturnRequest, ReturnStatus } from '../shared/returns';
+import { DEFAULT_SETTINGS, type StoreSettings } from '../shared/settings';
 
-// Data access for return requests. Every function takes the Wix app
+// Data access for return requests and store settings. Every function takes the Wix app
 // instance ID and filters on it, so one store can never see another's data.
 
 let client: ReturnType<typeof neon> | null = null;
@@ -146,4 +147,28 @@ export async function transition(
                 returning *`,
   );
   return updated[0] ?? null;
+}
+
+/** The store's settings, or the defaults if it never saved any. */
+export async function getSettings(instanceId: string): Promise<StoreSettings> {
+  const [row] = (await sql()`select accept_returns, return_window_days, return_reasons
+                             from store_settings where instance_id = ${instanceId}`) as {
+    accept_returns: boolean;
+    return_window_days: number;
+    return_reasons: string[];
+  }[];
+  if (!row) return DEFAULT_SETTINGS;
+  return { acceptReturns: row.accept_returns, returnWindowDays: row.return_window_days, returnReasons: row.return_reasons };
+}
+
+export async function saveSettings(instanceId: string, settings: StoreSettings): Promise<StoreSettings> {
+  await sql()`insert into store_settings (instance_id, accept_returns, return_window_days, return_reasons)
+              values (${instanceId}, ${settings.acceptReturns}, ${settings.returnWindowDays},
+                      ${JSON.stringify(settings.returnReasons)}::jsonb)
+              on conflict (instance_id) do update
+                set accept_returns = excluded.accept_returns,
+                    return_window_days = excluded.return_window_days,
+                    return_reasons = excluded.return_reasons,
+                    updated_at = now()`;
+  return settings;
 }
