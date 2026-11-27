@@ -14,10 +14,10 @@ Static site for Parcelback: landing page, privacy policy, terms of use, support/
 
 ## Before publishing
 
-1. **Fill in the placeholders** in `privacy.html` and `terms.html`: `[OPERATOR NAME]`, `[POSTAL ADDRESS]`, `[COUNTRY]`. GDPR requires the operator's identity and contact address.
-2. **Domain:** the pages use `parcelback.app` for the email addresses (hello@, support@, privacy@). If you register another domain, replace it everywhere: `grep -rl parcelback.app site/`.
-3. **Deletion after uninstall:** the privacy policy promises deleting a store's data within 30 days of uninstalling. The app doesn't do this yet; build it (Wix "app removed" event → delete the store's rows) before launch.
-4. Have the privacy policy and terms checked as part of the legal review.
+1. ~~Operator details~~ filled in (Shane Ulker, full postal address in Selcuklu/Konya, Turkey), 2026-11-27.
+2. ~~Domain~~ `parcelback.app` is registered, deployed on Cloudflare Pages, and hello@, support@ and privacy@ forward to the owner's inbox.
+3. ~~Deletion after uninstall~~ built (app-removed event + `npm run db:delete-store`); the event still needs a check after the first release.
+4. Have the privacy policy and terms checked as part of the legal review. Points for the reviewer: the operator is based in Turkey and serves EU stores, so check whether an EU representative is needed (GDPR Art. 27) and how Turkish data protection law (KVKK) applies.
 
 ## Deploy on Cloudflare Pages
 
