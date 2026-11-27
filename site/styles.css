@@ -503,6 +503,65 @@ h3 {
   font-size: 0.98rem;
 }
 
+/* Screenshots: framed prints on the kraft paper. Customer screens (portrait)
+   on the left, dashboard screens (landscape) on the right, so the columns end
+   at about the same height. */
+.gallery {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: start;
+}
+
+.gallery-col {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2rem);
+}
+
+.gallery-head {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--stamp);
+  margin: 0;
+}
+
+.shot {
+  margin: 0;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 0.75rem 0.75rem 0;
+  box-shadow: 6px 6px 0 rgb(29 26 22 / 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.shot:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 9px 9px 0 rgb(29 26 22 / 0.2);
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1.5px solid rgb(29 26 22 / 0.25);
+  border-radius: 3px;
+  background: #fff;
+}
+
+.shot figcaption {
+  padding: 0.7rem 0.1rem 0.85rem;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+
+#screenshots .note {
+  margin-top: 1.5rem;
+}
+
 /* EU block */
 .eu {
   display: grid;
@@ -897,6 +956,10 @@ details > div {
   }
 
   .features {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gallery {
     grid-template-columns: minmax(0, 1fr);
   }
 

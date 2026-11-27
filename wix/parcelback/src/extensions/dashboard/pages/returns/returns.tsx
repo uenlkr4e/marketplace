@@ -161,7 +161,7 @@ const ReturnsPage: FC = () => {
   const actions = (r: ReturnRequest) => {
     if (busyId === r.id) return <Loader size="tiny" />;
     return (
-      <Box gap="SP2" align="right">
+      <Box direction="vertical" gap="SP2" align="right">
         {r.status === 'REQUESTED' && (
           <>
             <Button size="small" onClick={() => run(r, () => applyAction(r, 'approve'), `${r.rmaNumber} approved.`)}>
@@ -253,9 +253,11 @@ const ReturnsPage: FC = () => {
                 columns={[
                   {
                     title: 'Reference',
+                    width: '15%',
                     render: (r) => (
                       <Box direction="vertical" gap="SP1">
                         <Text weight="bold">{r.rmaNumber}</Text>
+                        <Text size="tiny" secondary>{`Order #${r.orderNumber}`}</Text>
                         {r.kind === 'WITHDRAWAL' && (
                           <Badge size="tiny" skin="standard">
                             Withdrawal
@@ -264,18 +266,22 @@ const ReturnsPage: FC = () => {
                       </Box>
                     ),
                   },
-                  { title: 'Order', render: (r) => `#${r.orderNumber}` },
                   {
                     title: 'Customer',
+                    width: '20%',
                     render: (r) => (
                       <Box direction="vertical">
                         {r.customerName ? <Text size="small">{r.customerName}</Text> : null}
-                        <Text size="small">{r.customerEmail}</Text>
+                        {/* Long email addresses wrap instead of spilling into the next column. */}
+                        <Text size="small">
+                          <span style={{ overflowWrap: 'anywhere' }}>{r.customerEmail}</span>
+                        </Text>
                       </Box>
                     ),
                   },
                   {
                     title: 'Items',
+                    width: '23%',
                     render: (r) => (
                       <Box direction="vertical">
                         {r.items.map((i) => (
@@ -294,32 +300,36 @@ const ReturnsPage: FC = () => {
                     ),
                   },
                   {
-                    title: 'Amount',
-                    render: (r) =>
-                      r.status === 'REFUNDED' && r.refundedAmount != null
-                        ? `${money(r.refundedAmount, r.currency)} refunded`
-                        : money(r.requestedAmount, r.currency),
-                  },
-                  {
                     title: 'Status',
+                    width: '15%',
                     render: (r) => (
-                      <Badge size="small" skin={STATUS_SKIN[r.status]}>
-                        {r.status}
-                      </Badge>
+                      <Box direction="vertical" gap="SP1">
+                        <Badge size="small" skin={STATUS_SKIN[r.status]}>
+                          {r.status}
+                        </Badge>
+                        <Text size="small">
+                          {r.status === 'REFUNDED' && r.refundedAmount != null
+                            ? `${money(r.refundedAmount, r.currency)} refunded`
+                            : money(r.requestedAmount, r.currency)}
+                        </Text>
+                      </Box>
                     ),
                   },
                   {
                     title: 'Requested',
+                    width: '13%',
                     render: (r) => (
                       <Box direction="vertical">
-                        <Text size="small">{new Date(r.createdAt).toLocaleString()}</Text>
+                        <Text size="small">
+                          {new Date(r.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                        </Text>
                         {r.kind === 'WITHDRAWAL' && OPEN.includes(r.status) && (
                           <Text size="tiny" secondary>{`Refund due by ${refundDueBy(r)}`}</Text>
                         )}
                       </Box>
                     ),
                   },
-                  { title: '', render: actions, width: '240px' },
+                  { title: '', render: actions, width: '14%' },
                 ]}
               >
                 <Table.Content />

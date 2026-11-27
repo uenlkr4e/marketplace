@@ -133,6 +133,8 @@ npm run db:delete-store -- <instanceId>   # delete one store's data (support req
 - [x] Editor widget settings: "EU withdrawal button" toggle (off by default) shows and hides the "Withdraw from contract here" link immediately
 - [x] Acknowledgement email received in a real inbox with all details filled in
 
+**Returns table layout (2026-11-27):** at a 1280 px browser width the Customer column overflowed into Items and status badges were cut off. Fixed with percentage column widths, the order number under the reference, the amount under the status and stacked action buttons; checked at 1280 and 1500 px.
+
 **Deletion on uninstall (2026-11-27):**
 
 - [x] `deleteStoreData` on the second dev site's store (after uninstalling the app there): its request and settings were deleted; a second run deleted nothing; the main dev site's data was untouched
