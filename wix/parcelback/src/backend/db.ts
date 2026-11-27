@@ -243,3 +243,17 @@ export async function withOrderLock<T>(instanceId: string, orderId: string, fn: 
     await sql()`delete from order_locks where instance_id = ${instanceId} and order_id = ${orderId} and token = ${token}`;
   }
 }
+
+/**
+ * Deletes everything stored for a store: return/withdrawal requests, settings
+ * and order locks. Rate-limit counters are hashed per store and expire on their
+ * own within about a day. Returns how many requests were deleted.
+ */
+export async function deleteStoreData(instanceId: string): Promise<number> {
+  const [deleted] = await sql().transaction([
+    sql()`delete from return_requests where instance_id = ${instanceId}`,
+    sql()`delete from store_settings where instance_id = ${instanceId}`,
+    sql()`delete from order_locks where instance_id = ${instanceId}`,
+  ], { fullResults: true });
+  return deleted.rowCount ?? 0;
+}

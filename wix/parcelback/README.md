@@ -27,6 +27,7 @@ Dashboard pages (Returns,       ──►  /merchant/returns, /merchant/return-a
   - 10 failed lookups (wrong order number or email) per client per hour.
   - 200 failed lookups per store per hour, to stop guessing spread over many visitors.
   - A client is the IP address if the platform forwards one, else the Wix visitor ID. In dev no IP header reaches the app, so it's the visitor ID. Keys are SHA-256 hashes, so no IPs are stored.
+- **Deletion on uninstall** (`src/extensions/backend/events/app-removed/`): Wix's "app instance removed" event deletes the store's requests, settings and order locks (`deleteStoreData` in `src/backend/db.ts`), as the privacy policy promises. Needs the **Manage Your App** permission. For deletion requests sent to support: `npm run db:delete-store -- <instanceId>`.
 - **Per-order lock** (`withOrderLock` in `src/backend/db.ts`, `order_locks` table): return and withdrawal requests re-read existing requests, check quantities and insert while holding a lock on the order. A second request waits up to about 3 seconds, then gets 409 `order_busy`. Locks expire after 30 seconds if a request dies while holding one.
 
 ## Customer emails (Wix Automations)
@@ -98,6 +99,7 @@ The site widget is translated into **English, German, French, Spanish, Italian, 
 
 1. Permissions:
    - Wix Stores **Read Orders** and **Manage Orders**.
+   - **Manage Your App**, for the "app removed" event that deletes a store's data.
    - **Read Products** (catalog V1), **Read products in v3 catalog** and **Read v3 catalog (PII)** (catalog version check) for the final-sale picker. Added 2026-11-27; sites with an older version installed must approve them when they update.
    - Wix Data permissions were removed.
 2. Database: Neon Postgres, `eu-central-1`.
@@ -116,6 +118,7 @@ npm run dev          # dev server; Wix reaches the backend through a secure tunn
 npm run typecheck
 npm run build
 npm run db:migrate   # apply db/schema.sql to DATABASE_URL
+npm run db:delete-store -- <instanceId>   # delete one store's data (support requests)
 ```
 
 **Chrome:** dashboard pages and the widget load from `http://localhost:5173`. Chrome asks whether manage.wix.com and the editor may access your local network; click **Allow**, or the page keeps spinning.
@@ -129,6 +132,12 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [x] Dashboard: badge, name, "Refund due by", reject warning; CSV export (6 rows × 15 columns, history included)
 - [x] Editor widget settings: "EU withdrawal button" toggle (off by default) shows and hides the "Withdraw from contract here" link immediately
 - [x] Acknowledgement email received in a real inbox with all details filled in
+
+**Deletion on uninstall (2026-11-27):**
+
+- [x] `deleteStoreData` on the second dev site's store (after uninstalling the app there): its request and settings were deleted; a second run deleted nothing; the main dev site's data was untouched
+- [x] `npm run db:delete-store` rejects a malformed ID and reports what it deleted
+- [ ] **The event itself:** uninstalling did not deliver `onAppInstanceRemoved`, neither to `wix app dev` nor to a `wix app preview` build. Wix's docs say not every event reaches local development; app lifecycle events most likely only reach a released version. Re-test after the first release by uninstalling from a dev site and checking the store's rows are gone.
 
 **Final sale products (2026-11-27):**
 
@@ -174,7 +183,7 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [ ] Automatic card refund (needs an order paid through a refundable provider)
 - [ ] EU withdrawal: legal review of the flow and wording (including the translated button labels); a model withdrawal form link
 - [ ] Translations were written without a native-speaker review; customer emails and the dashboard are English only
-- [ ] Delete a store's data within 30 days of uninstalling (promised in `site/privacy.html`): handle Wix's "app removed" event and delete its `return_requests`, `store_settings` and lock rows
+- [ ] Verify the "app removed" deletion after the first release (see Tested). Until then, `npm run db:delete-store` covers deletion requests.
 - [ ] Partial-quantity refunds, multi-payment orders, shipping refunds
 - [ ] Rotate the Neon password (it was shared in a chat) and re-run `wix app env set`
 - [ ] Thank-you page plugin slot isn't offered by `wix app generate` yet
