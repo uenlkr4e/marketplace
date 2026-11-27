@@ -7,7 +7,8 @@ Wix CLI app for order tracking, returns and the EU withdrawal function. Spec: `.
 ## Architecture
 
 ```
-Site widget (order-lookup)      ──►  POST /order-lookup, POST /return-request        (customer; order number + email)
+Site widget (order-lookup)      ──►  POST /order-lookup, POST /return-request,       (customer; order number + email)
+                                     POST /withdrawal
 Dashboard page (Returns)        ──►  /merchant/returns, /merchant/return-action,     (Wix USER tokens only)
                                      /merchant/refund-plan, /merchant/refund
                                           │                 │
@@ -30,9 +31,11 @@ Emails are sent **by Wix, as the store**. There's no email provider or domain to
 | Return requested | `return_requested` | `POST /return-request` |
 | Return approved | `return_approved` | `POST /merchant/return-action` (approve) |
 | Return rejected | `return_rejected` | `POST /merchant/return-action` (reject; a reason is required and sent as `merchant_note`) |
+| Withdrawal received | `withdrawal_received` | `POST /withdrawal` (the EU acknowledgement with date and time) |
 | Refunded | none | Wix's own refund email (`sendCustomerEmail` on refund) |
 
-- The triggers are configured in the app dashboard under **Develop → Automations**. They share one payload: `contact_id` (UUID marked `identityType: contact`, so the automation can email that contact), `rma_number`, `order_number`, `items_summary`, `reason`, `merchant_note`, `requested_at`.
+- The triggers are configured in the app dashboard under **Develop → Automations**. The three return triggers share one payload: `contact_id` (UUID marked `identityType: contact`, so the automation can email that contact), `rma_number`, `order_number`, `items_summary`, `reason`, `merchant_note`, `requested_at`.
+- `withdrawal_received` has its own payload: `contact_id`, `reference`, `order_number`, `customer_name`, `items_summary`, `customer_note`, `submitted_at` (e.g. "27 November 2026 at 14:07 UTC").
 - `src/backend/notify.ts` reports events with `activations.reportEvent`. It's best effort (a failure is logged, never blocks the return) and idempotent per request + event.
 - Permission: **Set Up Automations** (`SCOPE.CRM.SETUP-AUTOMATIONS`).
 - The buyer's Wix contact ID is stored in `return_requests.contact_id`.
@@ -50,6 +53,23 @@ REQUESTED ── approve ──► APPROVED ── receive ──► RECEIVED
   - If the provider can refund the payment: automatic refund to the original payment method.
   - Otherwise (e.g. offline payments): the refund is recorded in Wix (`externalRefund`) and the merchant sends the money themselves.
   - Optional restock and customer email in both cases.
+
+## EU withdrawal function
+
+Directive (EU) 2023/2673 requires online stores selling to EU consumers to offer a "withdraw from contract" function. Parcelback provides it as an option of the order lookup widget. This is compliance support, not legal advice.
+
+- **Opt-in:** widget settings → **EU withdrawal button** (widget prop `withdrawal-button`). Off by default, so non-EU stores don't show it.
+- **Customer flow:**
+  1. "Withdraw from contract here" on the lookup form (or on the order view).
+  2. Order number + email identify the order.
+  3. The customer confirms their name and the items (everything open is preselected) and can add a comment. No reason is asked for.
+  4. "Confirm withdrawal here" leads to a confirmation screen with the reference (`W<order>-<n>`), date and time, and items. The `withdrawal_received` email repeats the same details.
+- **Storage:** same `return_requests` table with `kind = 'WITHDRAWAL'` and `customer_name`. Withdrawals hold their quantities like returns, and the merchant handles them in the same queue (approve → receive → refund).
+- **Period** (`checkWithdrawal` in `src/backend/returns.ts`): open until the order is fulfilled. After that, 14 days + 7 days delivery buffer from the last shipment (or from the order date if it was marked fulfilled without a shipment). Wix has no delivery date, so the buffer errs on the customer's side. Cancelled or fully refunded orders can't be withdrawn from. No payment is required.
+- **Dashboard:**
+  - Withdrawals get a "Withdrawal" badge, the customer's name and a "Refund due by" date (14 days after the declaration).
+  - Rejecting one shows a warning that only an ended period or exempt goods justify it.
+  - **Export CSV** downloads all requests with their status history as the audit trail.
 
 ## Setup
 
@@ -74,7 +94,18 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 
 **Chrome:** dashboard pages and the widget load from `http://localhost:5173`. Chrome asks whether manage.wix.com and the editor may access your local network; click **Allow**, or the page keeps spinning.
 
-## Tested (2026-11-26, Neon backend)
+## Tested
+
+**EU withdrawal (2026-11-27):**
+
+- [x] Widget (editor preview, button switched on through the attribute): "Withdraw from contract here" → lookup of #10004 → name prefilled, item preselected → "Confirm withdrawal here" → `W10004-3` with timestamp; the order view then lists it as "Withdrawal … (Received)"
+- [x] `withdrawal_received` reported without errors. The site automation "Withdrawal received: confirmation email" is active and exported as pre-installed.
+- [x] Dashboard: badge, name, "Refund due by", reject warning; CSV export (6 rows × 15 columns, history included)
+- [ ] Panel toggle in the editor's widget settings (same `setProp` pattern as the heading)
+- [ ] Acknowledgement email in a real inbox
+
+**Returns (2026-11-26, Neon backend):**
+
 
 - [x] Widget: lookup, "Start a return", submit; the row lands in Neon with the right store ID and the widget shows "Requested"
 - [x] Dashboard: list, Approve, Mark received through the merchant endpoints
@@ -87,8 +118,8 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [ ] Merchant endpoints with a real anonymous **VISITOR** token (needs a published site). The editor-preview token tested was the owner's own USER token, which is allowed by design.
 - [ ] Refund modal UI on a fresh request (its `/merchant/refund-plan` call wasn't exercised through the UI after the migration)
 - [ ] Automatic card refund (needs an order paid through a refundable provider)
-- [ ] Customer emails for request received, approved and rejected (Resend free tier); only Wix's refund email is sent today
-- [ ] Two simultaneous *requests* for the same items can both pass the quantity check (refunds are protected; requests aren't yet)
+- [ ] Two simultaneous *requests* (returns or withdrawals) for the same items can both pass the quantity check (refunds are protected; requests aren't yet)
+- [ ] EU withdrawal: legal review of the flow and wording; translated UI (DE/FR/ES…); a model withdrawal form link
 - [ ] Rate limiting for public endpoints (Neon can hold the counters now)
 - [ ] Settings page (return window, reasons), partial-quantity refunds, multi-payment orders, shipping refunds
 - [ ] Rotate the Neon password (it was shared in a chat) and re-run `wix app env set`

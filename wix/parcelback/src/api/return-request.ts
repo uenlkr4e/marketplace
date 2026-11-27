@@ -2,17 +2,18 @@ import type { APIRoute } from '@wix/custom-extensions/types';
 import {
   NOT_FOUND,
   withErrorHandling,
+  buildItems,
   checkEligibility,
   findCustomerOrder,
   getFulfillments,
   json,
   parseCustomer,
-  unitAmount,
+  parseItems,
 } from '../backend/returns';
 import { getCaller } from '../backend/caller';
 import { notifyCustomer } from '../backend/notify';
 import { insertRequest, listForOrder } from '../backend/db';
-import { RETURN_REASONS, roundMoney, type ReturnItem } from '../shared/returns';
+import { RETURN_REASONS, roundMoney } from '../shared/returns';
 
 /**
  * POST /return-request
@@ -43,15 +44,7 @@ export const POST: APIRoute = withErrorHandling('return-request', async ({ reque
   }
   const customerNote = String(body.note ?? '').trim().slice(0, 1000);
 
-  const requested = Array.isArray(body.items) ? body.items : [];
-  const wanted = new Map<string, number>();
-  for (const entry of requested) {
-    const lineItemId = String((entry as { lineItemId?: unknown })?.lineItemId ?? '');
-    const quantity = Number((entry as { quantity?: unknown })?.quantity ?? 0);
-    if (lineItemId && Number.isInteger(quantity) && quantity > 0) {
-      wanted.set(lineItemId, (wanted.get(lineItemId) ?? 0) + quantity);
-    }
-  }
+  const wanted = parseItems(body.items);
   if (!wanted.size) {
     return json({ error: 'Please choose at least one item to return.' }, 400);
   }
@@ -75,25 +68,17 @@ export const POST: APIRoute = withErrorHandling('return-request', async ({ reque
     return json({ error: eligibility.reason }, 409);
   }
 
-  const items: ReturnItem[] = [];
-  for (const [lineItemId, quantity] of wanted) {
-    const lineItem = order.lineItems?.find((li) => li._id === lineItemId);
-    const available = eligibility.returnable[lineItemId] ?? 0;
-    if (!lineItem || quantity > available) {
-      return json({ error: 'One of the selected items can’t be returned in that quantity.' }, 409);
-    }
-    items.push({
-      lineItemId,
-      name: lineItem.productName?.translated ?? lineItem.productName?.original ?? '',
-      quantity,
-      unitAmount: unitAmount(lineItem),
-    });
+  const items = buildItems(order, wanted, eligibility.returnable);
+  if (!items) {
+    return json({ error: 'One of the selected items can’t be returned in that quantity.' }, 409);
   }
 
   const saved = await insertRequest(caller.instanceId, {
+    kind: 'RETURN',
     orderId: order._id,
     orderNumber: String(order.number),
     customerEmail: customer.email,
+    customerName: null,
     contactId: order.buyerInfo?.contactId ?? null,
     items,
     reason,

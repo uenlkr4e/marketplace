@@ -10,7 +10,7 @@ import type { ReturnRequest } from '../shared/returns';
 // Trigger keys and payload fields must match the triggers configured in the
 // app dashboard (Develop > Automations).
 
-export type ReturnEvent = 'return_requested' | 'return_approved' | 'return_rejected';
+export type ReturnEvent = 'return_requested' | 'return_approved' | 'return_rejected' | 'withdrawal_received';
 
 const reportEvent = auth.elevate(activations.reportEvent);
 
@@ -24,21 +24,41 @@ export async function notifyCustomer(event: ReturnEvent, request: ReturnRequest)
     console.warn(`[parcelback] ${event}: no contact ID for ${request.rmaNumber}; email skipped`);
     return;
   }
+  const itemsSummary = request.items.map((i) => `${i.name} × ${i.quantity}`).join(', ');
+  // The withdrawal acknowledgement must state what was submitted and when.
+  const payload =
+    event === 'withdrawal_received'
+      ? {
+          contact_id: request.contactId,
+          reference: request.rmaNumber,
+          order_number: request.orderNumber,
+          customer_name: request.customerName ?? '',
+          items_summary: itemsSummary,
+          customer_note: request.customerNote,
+          submitted_at: formatTimestamp(request.createdAt),
+        }
+      : {
+          contact_id: request.contactId,
+          rma_number: request.rmaNumber,
+          order_number: request.orderNumber,
+          items_summary: itemsSummary,
+          reason: request.reason,
+          merchant_note: request.merchantNote ?? '',
+          requested_at: request.createdAt,
+        };
   try {
     await reportEvent(event, {
-      payload: {
-        contact_id: request.contactId,
-        rma_number: request.rmaNumber,
-        order_number: request.orderNumber,
-        items_summary: request.items.map((i) => `${i.name} × ${i.quantity}`).join(', '),
-        reason: request.reason,
-        merchant_note: request.merchantNote ?? '',
-        requested_at: request.createdAt,
-      },
+      payload,
       externalEntityId: request.id,
       idempotency: { key: `${request.id}:${event}` },
     });
   } catch (e) {
     console.error(`[parcelback] ${event} for ${request.rmaNumber} not reported:`, e instanceof Error ? e.message : e);
   }
+}
+
+/** e.g. "27 November 2026 at 14:03 UTC" */
+export function formatTimestamp(iso: string): string {
+  const formatted = new Date(iso).toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC' });
+  return `${formatted} UTC`;
 }

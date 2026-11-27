@@ -31,3 +31,10 @@ create index if not exists return_requests_created_idx on return_requests (insta
 
 -- Wix CRM contact of the buyer; lets automations email the customer. (added 2026-11-26)
 alter table return_requests add column if not exists contact_id text;
+
+-- EU right of withdrawal (Directive (EU) 2023/2673). (added 2026-11-27)
+-- kind: RETURN = store return policy; WITHDRAWAL = statutory withdrawal (no reason required).
+alter table return_requests add column if not exists kind text not null default 'RETURN';
+alter table return_requests add column if not exists customer_name text;
+alter table return_requests drop constraint if exists return_requests_kind_check;
+alter table return_requests add constraint return_requests_kind_check check (kind in ('RETURN', 'WITHDRAWAL'));

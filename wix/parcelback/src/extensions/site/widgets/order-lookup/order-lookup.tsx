@@ -7,12 +7,13 @@ type Shipment = {
   trackingLink: string | null;
 };
 
-type LineItem = { id: string; name: string; quantity: number; returnableQuantity: number };
+type LineItem = { id: string; name: string; quantity: number; returnableQuantity: number; withdrawableQuantity: number };
 
 type LookupResult = {
   number: string;
   createdDate: string;
   fulfillmentStatus: string;
+  customerName: string;
   lineItems: LineItem[];
   shipments: Shipment[];
   returns: {
@@ -20,13 +21,17 @@ type LookupResult = {
     reason: string | null;
     windowEndsAt: string | null;
     requests: {
+      kind: 'RETURN' | 'WITHDRAWAL';
       rmaNumber: string;
       status: string;
       items: { name: string; quantity: number }[];
       rejectionReason: string | null;
     }[];
   };
+  withdrawal: { available: boolean; reason: string | null; periodEndsAt: string | null };
 };
+
+type Mode = 'track' | 'withdraw';
 
 type Customer = { orderNumber: string; email: string };
 
@@ -40,6 +45,8 @@ const STATUS_LABELS: Record<string, string> = {
   REFUNDING: 'Refund in progress',
   REFUNDED: 'Refunded',
 };
+const WITHDRAWAL_STATUS_LABELS: Record<string, string> = { ...STATUS_LABELS, REQUESTED: 'Received' };
+const WITHDRAW_LABEL = 'Withdraw from contract here';
 
 const STYLES = `
   order-lookup { display: block; font: inherit; color: inherit; }
@@ -51,6 +58,7 @@ const STYLES = `
   order-lookup .abo-muted { opacity: 0.75; }
   order-lookup .abo-row { display: flex; gap: 8px; align-items: center; }
   order-lookup .abo-row label { flex: 1; }
+  order-lookup .abo-link { background: none; border: none; padding: 0; text-decoration: underline; justify-self: start; }
   order-lookup ul { padding-left: 18px; }
 `;
 
@@ -82,7 +90,12 @@ async function post(path: string, payload: unknown) {
 
 class OrderLookup extends HTMLElement {
   static get observedAttributes() {
-    return ['display-name'];
+    return ['display-name', 'withdrawal-button'];
+  }
+
+  // EU withdrawal button, switched on in the widget settings.
+  private get withdrawalEnabled() {
+    return this.getAttribute('withdrawal-button') === 'true';
   }
 
   connectedCallback() {
@@ -97,10 +110,10 @@ class OrderLookup extends HTMLElement {
     this.replaceChildren(el('style', { textContent: STYLES }), el('div', { className: 'abo-card' }, children));
   }
 
-  private renderForm(message = '') {
+  private renderForm(message = '', mode: Mode = 'track') {
     const orderNumber = el('input', { name: 'orderNumber', placeholder: 'Order number', inputMode: 'numeric', required: true });
     const email = el('input', { name: 'email', type: 'email', placeholder: 'Email used at checkout', required: true });
-    const submit = el('button', { type: 'submit', textContent: 'Find my order' });
+    const submit = el('button', { type: 'submit', textContent: mode === 'withdraw' ? 'Continue' : 'Find my order' });
     const form = el('form', {}, [orderNumber, email, submit]);
     if (message) form.append(errorText(message));
 
@@ -108,22 +121,40 @@ class OrderLookup extends HTMLElement {
       e.preventDefault();
       submit.disabled = true;
       submit.textContent = 'Searching…';
-      void this.lookup({ orderNumber: orderNumber.value, email: email.value });
+      void this.lookup({ orderNumber: orderNumber.value, email: email.value }, mode);
     });
 
+    if (mode === 'withdraw') {
+      const back = el('button', { type: 'button', className: 'abo-link', textContent: 'Back' });
+      back.addEventListener('click', () => this.renderForm());
+      form.append(back);
+      this.mount(
+        el('h2', { textContent: 'Withdraw from contract' }),
+        el('p', { textContent: 'Enter your order number and the email you used at checkout to identify your order.' }),
+        form,
+      );
+      return;
+    }
+    if (this.withdrawalEnabled) {
+      const withdraw = el('button', { type: 'button', className: 'abo-link', textContent: WITHDRAW_LABEL });
+      withdraw.addEventListener('click', () => this.renderForm('', 'withdraw'));
+      form.append(withdraw);
+    }
     this.mount(el('h2', { textContent: this.getAttribute('display-name') || DEFAULT_TITLE }), form);
   }
 
-  private async lookup(customer: Customer) {
+  private async lookup(customer: Customer, mode: Mode = 'track') {
     try {
       const { ok, body } = await post('order-lookup', customer);
-      if (ok) {
-        this.renderResult(customer, body as LookupResult);
+      if (!ok) {
+        this.renderForm(body.error ?? GENERIC_ERROR, mode);
+      } else if (mode === 'withdraw' && (body as LookupResult).withdrawal.available) {
+        this.renderWithdrawalForm(customer, body as LookupResult);
       } else {
-        this.renderForm(body.error ?? GENERIC_ERROR);
+        this.renderResult(customer, body as LookupResult);
       }
     } catch {
-      this.renderForm(GENERIC_ERROR);
+      this.renderForm(GENERIC_ERROR, mode);
     }
   }
 
@@ -149,8 +180,9 @@ class OrderLookup extends HTMLElement {
           'ul',
           {},
           order.returns.requests.map((r) => {
+            const labels = r.kind === 'WITHDRAWAL' ? WITHDRAWAL_STATUS_LABELS : STATUS_LABELS;
             const li = el('li', {
-              textContent: `${r.rmaNumber}: ${r.items.map((i) => `${i.name} × ${i.quantity}`).join(', ')} (${STATUS_LABELS[r.status] ?? r.status})`,
+              textContent: `${r.kind === 'WITHDRAWAL' ? 'Withdrawal ' : ''}${r.rmaNumber}: ${r.items.map((i) => `${i.name} × ${i.quantity}`).join(', ')} (${labels[r.status] ?? r.status})`,
             });
             if (r.rejectionReason) {
               li.append(el('br'), el('span', { className: 'abo-muted', textContent: `Reason: ${r.rejectionReason}` }));
@@ -173,6 +205,26 @@ class OrderLookup extends HTMLElement {
       returnsSection.push(el('p', { className: 'abo-muted', textContent: order.returns.reason }));
     }
 
+    const withdrawalSection: Node[] = [];
+    if (this.withdrawalEnabled) {
+      if (order.withdrawal.available) {
+        withdrawalSection.push(el('h3', { textContent: 'Withdrawal' }));
+        if (order.withdrawal.periodEndsAt) {
+          withdrawalSection.push(
+            el('p', { className: 'abo-muted', textContent: `You can withdraw until ${new Date(order.withdrawal.periodEndsAt).toLocaleDateString()}.` }),
+          );
+        }
+        const withdraw = el('button', { type: 'button', textContent: WITHDRAW_LABEL });
+        withdraw.addEventListener('click', () => this.renderWithdrawalForm(customer, order));
+        withdrawalSection.push(withdraw);
+      } else if (order.withdrawal.reason && order.withdrawal.reason !== order.returns.reason) {
+        withdrawalSection.push(
+          el('h3', { textContent: 'Withdrawal' }),
+          el('p', { className: 'abo-muted', textContent: order.withdrawal.reason }),
+        );
+      }
+    }
+
     const back = el('button', { type: 'button', textContent: 'Look up another order' });
     back.addEventListener('click', () => this.renderForm());
 
@@ -184,6 +236,7 @@ class OrderLookup extends HTMLElement {
       el('h3', { textContent: 'Shipments' }),
       el('ul', {}, shipments),
       ...returnsSection,
+      ...withdrawalSection,
       el('p'),
       back,
     );
@@ -256,6 +309,89 @@ class OrderLookup extends HTMLElement {
       }
     } catch {
       this.renderReturnForm(customer, order, GENERIC_ERROR);
+    }
+  }
+
+  private renderWithdrawalForm(customer: Customer, order: LookupResult, message = '') {
+    // Everything still open is preselected; the customer can narrow it down.
+    const rows = order.lineItems
+      .filter((i) => i.withdrawableQuantity > 0)
+      .map((item) => {
+        const quantity = el('select', { name: `qty-${item.id}` }, [
+          el('option', { value: '0', textContent: 'Keep' }),
+          ...Array.from({ length: item.withdrawableQuantity }, (_, n) =>
+            el('option', { value: String(n + 1), textContent: `Withdraw ${n + 1}` }),
+          ),
+        ]);
+        quantity.value = String(item.withdrawableQuantity);
+        quantity.dataset.lineItemId = item.id;
+        return { quantity, row: el('div', { className: 'abo-row' }, [el('label', { textContent: item.name }), quantity]) };
+      });
+
+    const name = el('input', { name: 'name', placeholder: 'Your full name', value: order.customerName, required: true, maxLength: 200 });
+    const note = el('textarea', { name: 'note', placeholder: 'Comment (optional)', maxLength: 1000, rows: 3 });
+    const submit = el('button', { type: 'submit', textContent: 'Confirm withdrawal here' });
+    const cancel = el('button', { type: 'button', textContent: 'Cancel' });
+    cancel.addEventListener('click', () => this.renderResult(customer, order));
+
+    const form = el('form', {}, [
+      ...rows.map((r) => r.row),
+      name,
+      el('p', { className: 'abo-muted', textContent: `The confirmation will be sent to ${customer.email}.` }),
+      note,
+      submit,
+      cancel,
+    ]);
+    if (message) form.append(errorText(message));
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const items = rows
+        .map((r) => ({ lineItemId: r.quantity.dataset.lineItemId!, quantity: Number(r.quantity.value) }))
+        .filter((i) => i.quantity > 0);
+      if (!items.length) {
+        this.renderWithdrawalForm(customer, order, 'Please choose at least one item.');
+        return;
+      }
+      submit.disabled = true;
+      submit.textContent = 'Submitting…';
+      void this.submitWithdrawal(customer, order, { items, name: name.value, note: note.value });
+    });
+
+    this.mount(
+      el('h2', { textContent: 'Withdraw from contract' }),
+      el('p', { textContent: `Order #${order.number}, placed ${new Date(order.createdDate).toLocaleDateString()}. You don’t need to give a reason.` }),
+      form,
+    );
+  }
+
+  private async submitWithdrawal(
+    customer: Customer,
+    order: LookupResult,
+    request: { items: { lineItemId: string; quantity: number }[]; name: string; note: string },
+  ) {
+    try {
+      const { ok, body } = await post('withdrawal', { ...customer, ...request });
+      if (!ok) {
+        this.renderWithdrawalForm(customer, order, body.error ?? GENERIC_ERROR);
+        return;
+      }
+      const receipt = body as { reference: string; submittedAt: string; items: { name: string; quantity: number }[] };
+      const submittedAt = new Date(receipt.submittedAt).toLocaleString(undefined, { dateStyle: 'long', timeStyle: 'short' });
+      const confirmation = el('p', { textContent: `We received your withdrawal from order #${order.number} on ${submittedAt}.` });
+      confirmation.setAttribute('role', 'status');
+      const back = el('button', { type: 'button', textContent: 'Back to my order' });
+      back.addEventListener('click', () => void this.lookup(customer));
+      this.mount(
+        el('h2', { textContent: 'Withdrawal received' }),
+        confirmation,
+        el('p', { textContent: `Reference: ${receipt.reference}` }),
+        el('ul', {}, receipt.items.map((i) => el('li', { textContent: `${i.name} × ${i.quantity}` }))),
+        el('p', { className: 'abo-muted', textContent: `A confirmation has been sent to ${customer.email}. The store will tell you how to send the items back.` }),
+        back,
+      );
+    } catch {
+      this.renderWithdrawalForm(customer, order, GENERIC_ERROR);
     }
   }
 }

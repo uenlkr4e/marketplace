@@ -1,6 +1,6 @@
 # Customer emails: wording and remaining setup
 
-Emails go through **Wix Automations**. The app reports `return_requested`, `return_approved` and `return_rejected` (see `src/backend/notify.ts`). Each automation is "Parcelback trigger → Send an email", and Wix sends it to the trigger's contact (`contact_id`).
+Emails go through **Wix Automations**. The app reports `return_requested`, `return_approved`, `return_rejected` and `withdrawal_received` (see `src/backend/notify.ts`). Each automation is "Parcelback trigger → Send an email", and Wix sends it to the trigger's contact (`contact_id`).
 
 Variables below refer to the trigger fields. In Wix's email editor, insert them with **+ Add variable → Parcelback**.
 
@@ -55,6 +55,28 @@ Variables below refer to the trigger fields. In Wix's email editor, insert them 
   > Thanks,
   > {Site name}
 
+## 4. Withdrawal received (EU acknowledgement)
+
+The law requires confirming receipt "on a durable medium" with the content and the date and time of the withdrawal, so this email always includes them.
+
+- **Subject:** Confirmation of your withdrawal {Withdrawal reference}
+- **Body:**
+
+  > Hi {Customer name},
+  >
+  > This email confirms that we received your withdrawal from the contract for order **#{Order number}** on **{Submitted at}**.
+  >
+  > **Reference:** {Withdrawal reference}
+  > **Items:** {Withdrawn items}
+  > **Your comment:** {Customer comment}
+  >
+  > We'll email you shortly with instructions for sending the items back. We'll refund your payment within 14 days of receiving your withdrawal; we may wait until we've received the items back or you've shown proof that you sent them.
+  >
+  > Please keep this email for your records.
+  >
+  > Thanks,
+  > {Site name}
+
 ## Status (2026-11-26)
 
 - [x] Triggers created in the app dashboard (Develop → Automations): Return requested / approved / rejected, with `contact_id` connected to the contact
@@ -64,5 +86,6 @@ Variables below refer to the trigger fields. In Wix's email editor, insert them 
 - [x] Real-inbox test (2026-11-27): requested, approved and rejected emails received at the owner's address with all variables filled in.
 - [x] Exported as **pre-installed automations** (2026-11-27): all three, default status Active, merchants can edit step settings. They take effect when a released app version is installed; the triggers must be live (released) for them to run. Export path: site Automations in Advanced Mode → ⋯ → Generate link → app dashboard → Automations → Pre-installed → paste link.
 - [x] Rejecting requires a reason (dashboard window + server check). It's stored as `merchant_note`, shown in the rejection email and in the order lookup widget. Approving needs no note. Tested 2026-11-27 with R10004-2.
+- [x] Withdrawal (2026-11-27): trigger `withdrawal_received` created with `contact_id` connected; site automation "Withdrawal received: confirmation email" active (wording via "Configure with AI"; it signs off "The team" rather than the site name); exported as pre-installed, default Active. Real-inbox check pending.
 
 Note: Wix's automation emails count against the **store's** email quota (200 a month on a free site).

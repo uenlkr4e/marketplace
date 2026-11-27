@@ -11,6 +11,16 @@ export const RETURN_REASONS = [
   'Other',
 ] as const;
 
+// EU right of withdrawal (Directive (EU) 2023/2673): 14 days from delivery,
+// no reason needed. Wix doesn't record delivery, so the period is counted from
+// the last shipment plus a delivery buffer, erring on the customer's side.
+export const WITHDRAWAL_PERIOD_DAYS = 14;
+export const WITHDRAWAL_DELIVERY_BUFFER_DAYS = 7;
+export const WITHDRAWAL_REASON = 'Withdrawal from contract';
+
+// RETURN = the store's return policy; WITHDRAWAL = statutory EU withdrawal.
+export type RequestKind = 'RETURN' | 'WITHDRAWAL';
+
 // REFUNDING is a short-lived lock while the payment provider processes a refund.
 export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'RECEIVED' | 'REFUNDING' | 'REFUNDED';
 
@@ -29,10 +39,12 @@ export type HistoryEntry = { status: ReturnStatus; at: string; note?: string };
 
 export type ReturnRequest = {
   id: string;
+  kind: RequestKind;
   rmaNumber: string;
   orderId: string;
   orderNumber: string;
   customerEmail: string;
+  customerName: string | null;
   contactId: string | null;
   items: ReturnItem[];
   reason: string;

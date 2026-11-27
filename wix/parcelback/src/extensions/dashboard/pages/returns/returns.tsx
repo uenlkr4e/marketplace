@@ -33,6 +33,46 @@ const STATUS_SKIN: Record<ReturnStatus, 'warning' | 'general' | 'danger' | 'succ
 };
 const OPEN: ReturnStatus[] = ['REQUESTED', 'APPROVED', 'RECEIVED', 'REFUNDING'];
 
+// Withdrawals must be refunded within 14 days of the customer's declaration
+// (the store may wait until the items are back).
+const WITHDRAWAL_REFUND_DAYS = 14;
+const refundDueBy = (r: ReturnRequest) =>
+  new Date(new Date(r.createdAt).getTime() + WITHDRAWAL_REFUND_DAYS * 24 * 60 * 60 * 1000).toLocaleDateString();
+const kindLabel = (r: ReturnRequest) => (r.kind === 'WITHDRAWAL' ? 'withdrawal' : 'return');
+
+// CSV of every request, including its status history, for the merchant's records.
+function exportCsv(requests: ReturnRequest[]) {
+  const header = [
+    'Reference', 'Type', 'Order', 'Customer name', 'Customer email', 'Items', 'Reason', 'Customer note',
+    'Status', 'Submitted (UTC)', 'Last updated (UTC)', 'Merchant note', 'Refunded amount', 'Currency', 'History',
+  ];
+  const rows = requests.map((r) => [
+    r.rmaNumber,
+    r.kind === 'WITHDRAWAL' ? 'Withdrawal' : 'Return',
+    r.orderNumber,
+    r.customerName ?? '',
+    r.customerEmail,
+    r.items.map((i) => `${i.name} x ${i.quantity}`).join('; '),
+    r.reason,
+    r.customerNote,
+    r.status,
+    r.createdAt,
+    r.updatedAt,
+    r.merchantNote ?? '',
+    r.refundedAmount == null ? '' : r.refundedAmount.toFixed(2),
+    r.currency,
+    r.history.map((h) => `${h.status} ${h.at}${h.note ? ` (${h.note})` : ''}`).join('; '),
+  ]);
+  // Quote every field; a leading quote mark stops spreadsheets from running formulas.
+  const cell = (value: string) => `"${(/^[=+\-@]/.test(value) ? `'${value}` : value).replace(/"/g, '""')}"`;
+  const csv = [header, ...rows].map((row) => row.map(cell).join(',')).join('\r\n');
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }));
+  link.download = `parcelback-requests-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const money = (amount: number, currency: string) => {
   try {
@@ -162,11 +202,16 @@ const ReturnsPage: FC = () => {
       <Page>
         <Page.Header
           title="Returns"
-          subtitle="Return requests your customers submit from the order lookup widget."
+          subtitle="Return requests and EU withdrawals your customers submit from the order lookup widget."
           actionsBar={
-            <Button priority="secondary" onClick={() => load()}>
-              Refresh
-            </Button>
+            <Box gap="SP2">
+              <Button priority="secondary" disabled={!requests?.length} onClick={() => requests && exportCsv(requests)}>
+                Export CSV
+              </Button>
+              <Button priority="secondary" onClick={() => load()}>
+                Refresh
+              </Button>
+            </Box>
           }
         />
         <Page.Content>
@@ -206,9 +251,29 @@ const ReturnsPage: FC = () => {
               <Table
                 data={visible}
                 columns={[
-                  { title: 'RMA', render: (r) => <Text weight="bold">{r.rmaNumber}</Text> },
+                  {
+                    title: 'Reference',
+                    render: (r) => (
+                      <Box direction="vertical" gap="SP1">
+                        <Text weight="bold">{r.rmaNumber}</Text>
+                        {r.kind === 'WITHDRAWAL' && (
+                          <Badge size="tiny" skin="standard">
+                            Withdrawal
+                          </Badge>
+                        )}
+                      </Box>
+                    ),
+                  },
                   { title: 'Order', render: (r) => `#${r.orderNumber}` },
-                  { title: 'Customer', render: (r) => r.customerEmail },
+                  {
+                    title: 'Customer',
+                    render: (r) => (
+                      <Box direction="vertical">
+                        {r.customerName ? <Text size="small">{r.customerName}</Text> : null}
+                        <Text size="small">{r.customerEmail}</Text>
+                      </Box>
+                    ),
+                  },
                   {
                     title: 'Items',
                     render: (r) => (
@@ -245,7 +310,14 @@ const ReturnsPage: FC = () => {
                   },
                   {
                     title: 'Requested',
-                    render: (r) => (new Date(r.createdAt).toLocaleDateString()),
+                    render: (r) => (
+                      <Box direction="vertical">
+                        <Text size="small">{new Date(r.createdAt).toLocaleString()}</Text>
+                        {r.kind === 'WITHDRAWAL' && OPEN.includes(r.status) && (
+                          <Text size="tiny" secondary>{`Refund due by ${refundDueBy(r)}`}</Text>
+                        )}
+                      </Box>
+                    ),
                   },
                   { title: '', render: actions, width: '240px' },
                 ]}
@@ -260,7 +332,7 @@ const ReturnsPage: FC = () => {
       <Modal isOpen={rejectDraft !== null} onRequestClose={() => setRejectDraft(null)} shouldCloseOnOverlayClick>
         {rejectDraft && (
           <CustomModalLayout
-            title={`Reject return ${rejectDraft.request.rmaNumber}`}
+            title={`Reject ${kindLabel(rejectDraft.request)} ${rejectDraft.request.rmaNumber}`}
             primaryButtonText="Reject"
             primaryButtonProps={{ disabled: !rejectDraft.reason.trim(), skin: 'destructive' }}
             primaryButtonOnClick={confirmReject}
@@ -269,17 +341,26 @@ const ReturnsPage: FC = () => {
             onCloseButtonClick={() => setRejectDraft(null)}
             width="520px"
             content={
-              <FormField label="Reason for rejecting" infoContent="Included in the email to the customer." required>
-                <InputArea
-                  value={rejectDraft.reason}
-                  onChange={(e) => setRejectDraft({ ...rejectDraft, reason: e.target.value })}
-                  placeholder="e.g. The item was marked final sale at checkout."
-                  rows={4}
-                  maxLength={MAX_REASON_LENGTH}
-                  hasCounter
-                  autoFocus
-                />
-              </FormField>
+              <Box direction="vertical" gap="SP4">
+                {rejectDraft.request.kind === 'WITHDRAWAL' && (
+                  <SectionHelper skin="warning">
+                    Customers in the EU can withdraw without giving a reason. Only reject if the withdrawal period has
+                    ended or the items are exempt (for example, made-to-order items, or hygiene products the customer
+                    unsealed after delivery).
+                  </SectionHelper>
+                )}
+                <FormField label="Reason for rejecting" infoContent="Included in the email to the customer." required>
+                  <InputArea
+                    value={rejectDraft.reason}
+                    onChange={(e) => setRejectDraft({ ...rejectDraft, reason: e.target.value })}
+                    placeholder="e.g. The item was marked final sale at checkout."
+                    rows={4}
+                    maxLength={MAX_REASON_LENGTH}
+                    hasCounter
+                    autoFocus
+                  />
+                </FormField>
+              </Box>
             }
           />
         )}

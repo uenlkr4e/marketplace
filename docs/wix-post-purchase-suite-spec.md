@@ -37,6 +37,7 @@ Warning sign: AfterShip Returns and ReturnGO are already listed on Wix with **0 
 - A "Withdraw from contract here" link (footer or menu) that opens a short form with order lookup, then confirms immediately with a timestamped acknowledgement email.
 - Applies automatically only to orders within the configurable 14-day window. Each request is logged with a full audit trail and exportable as CSV.
 - Positioned as compliance support, **not legal advice**. Have an EU consumer-law reviewer check the flow and wording before launch.
+- _Built 2026-11-27_ as an opt-in button in the order lookup widget. The period counts from the last shipment plus a 7-day delivery buffer, because Wix has no delivery date. See `wix/parcelback/README.md`.
 
 ### D. Thank-you page plugin
 - A small "Track your order" and "Need to return something?" block in the thank-you page plugin slot, deep-linking to page A/B.

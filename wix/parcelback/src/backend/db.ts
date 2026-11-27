@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import type { HistoryEntry, ReturnItem, ReturnRequest, ReturnStatus } from '../shared/returns';
+import type { HistoryEntry, RequestKind, ReturnItem, ReturnRequest, ReturnStatus } from '../shared/returns';
 
 // Data access for return requests. Every function takes the Wix app
 // instance ID and filters on it, so one store can never see another's data.
@@ -19,10 +19,12 @@ function sql() {
 
 type Row = {
   id: string;
+  kind: RequestKind;
   rma_number: string;
   order_id: string;
   order_number: string;
   customer_email: string;
+  customer_name: string | null;
   contact_id: string | null;
   items: ReturnItem[];
   reason: string;
@@ -39,10 +41,12 @@ type Row = {
 
 const toRequest = (r: Row): ReturnRequest => ({
   id: r.id,
+  kind: r.kind,
   rmaNumber: r.rma_number,
   orderId: r.order_id,
   orderNumber: r.order_number,
   customerEmail: r.customer_email,
+  customerName: r.customer_name,
   contactId: r.contact_id,
   items: r.items,
   reason: r.reason,
@@ -90,21 +94,23 @@ export type NewReturnRequest = Omit<
 >;
 
 /**
- * Inserts a REQUESTED return. The RMA number is R<order>-<n>; if two requests
- * race for the same n, the unique constraint rejects one and we retry.
+ * Inserts a REQUESTED return or withdrawal. The reference is R<order>-<n>
+ * (W<order>-<n> for withdrawals); if two requests race for the same n, the
+ * unique constraint rejects one and we retry.
  */
 export async function insertRequest(instanceId: string, input: NewReturnRequest): Promise<ReturnRequest> {
   const history = JSON.stringify([{ status: 'REQUESTED', at: new Date().toISOString() }]);
+  const prefix = input.kind === 'WITHDRAWAL' ? 'W' : 'R';
   for (let attempt = 0; attempt < 3; attempt++) {
     const [{ n }] = (await sql()`select count(*)::int + 1 as n from return_requests
                                  where instance_id = ${instanceId} and order_id = ${input.orderId}`) as { n: number }[];
     try {
       return rows(
         await sql()`insert into return_requests
-          (instance_id, rma_number, order_id, order_number, customer_email, contact_id, items, reason,
-           customer_note, currency, requested_amount, status, history)
-          values (${instanceId}, ${`R${input.orderNumber}-${n}`}, ${input.orderId}, ${input.orderNumber},
-                  ${input.customerEmail}, ${input.contactId}, ${JSON.stringify(input.items)}::jsonb, ${input.reason},
+          (instance_id, kind, rma_number, order_id, order_number, customer_email, customer_name, contact_id, items,
+           reason, customer_note, currency, requested_amount, status, history)
+          values (${instanceId}, ${input.kind}, ${`${prefix}${input.orderNumber}-${n}`}, ${input.orderId},
+                  ${input.orderNumber}, ${input.customerEmail}, ${input.customerName}, ${input.contactId}, ${JSON.stringify(input.items)}::jsonb, ${input.reason},
                   ${input.customerNote}, ${input.currency}, ${input.requestedAmount}, 'REQUESTED', ${history}::jsonb)
           returning *`,
       )[0];

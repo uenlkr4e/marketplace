@@ -3,8 +3,11 @@ import { orderBilling, orders, orderFulfillments } from '@wix/ecom';
 import {
   ACTIVE_STATUSES,
   RETURN_WINDOW_DAYS,
+  WITHDRAWAL_DELIVERY_BUFFER_DAYS,
+  WITHDRAWAL_PERIOD_DAYS,
   roundMoney,
   type RefundPlan,
+  type ReturnItem,
   type ReturnRequest,
 } from '../shared/returns';
 
@@ -70,6 +73,35 @@ export function unitAmount(item: NonNullable<Order['lineItems']>[number]): numbe
   return roundMoney(total / quantity);
 }
 
+/** Parses `[{ lineItemId, quantity }]` from a request body into lineItemId -> quantity. */
+export function parseItems(raw: unknown): Map<string, number> {
+  const wanted = new Map<string, number>();
+  for (const entry of Array.isArray(raw) ? raw : []) {
+    const lineItemId = String((entry as { lineItemId?: unknown })?.lineItemId ?? '');
+    const quantity = Number((entry as { quantity?: unknown })?.quantity ?? 0);
+    if (lineItemId && Number.isInteger(quantity) && quantity > 0) {
+      wanted.set(lineItemId, (wanted.get(lineItemId) ?? 0) + quantity);
+    }
+  }
+  return wanted;
+}
+
+/** Builds the stored items, or null if any line item is unknown or over its returnable quantity. */
+export function buildItems(order: Order, wanted: Map<string, number>, returnable: Record<string, number>): ReturnItem[] | null {
+  const items: ReturnItem[] = [];
+  for (const [lineItemId, quantity] of wanted) {
+    const lineItem = order.lineItems?.find((li) => li._id === lineItemId);
+    if (!lineItem || quantity > (returnable[lineItemId] ?? 0)) return null;
+    items.push({
+      lineItemId,
+      name: lineItem.productName?.translated ?? lineItem.productName?.original ?? '',
+      quantity,
+      unitAmount: unitAmount(lineItem),
+    });
+  }
+  return items;
+}
+
 export type Eligibility = {
   eligible: boolean;
   reason?: string;
@@ -77,18 +109,15 @@ export type Eligibility = {
   returnable: Record<string, number>; // lineItemId -> quantity still returnable
 };
 
-/**
- * MVP rules:
- * - the order must be paid (or partially refunded)
- * - the window runs RETURN_WINDOW_DAYS from the first shipment, or from the order date if nothing shipped
- * - quantity = ordered - refunded (per Wix) - held by open return requests
- */
-export function checkEligibility(
-  order: Order,
-  fulfillments: Fulfillment[],
-  requests: ReturnRequest[],
-  now = new Date(),
-): Eligibility {
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const shipmentTimes = (fulfillments: Fulfillment[]) =>
+  fulfillments
+    .map((f) => (f._createdDate ? new Date(f._createdDate).getTime() : NaN))
+    .filter((t) => !Number.isNaN(t));
+
+/** Quantity per line item = ordered - refunded (per Wix) - held by open returns and withdrawals. */
+function returnableQuantities(order: Order, requests: ReturnRequest[]): Record<string, number> {
   const returnable: Record<string, number> = {};
   for (const item of order.lineItems ?? []) {
     if (!item._id) continue;
@@ -99,22 +128,83 @@ export function checkEligibility(
       .reduce((sum, i) => sum + i.quantity, 0);
     returnable[item._id] = Math.max(0, (item.quantity ?? 0) - (item.refundQuantity ?? 0) - held);
   }
+  return returnable;
+}
+
+/**
+ * MVP rules:
+ * - the order must be paid (or partially refunded)
+ * - the window runs RETURN_WINDOW_DAYS from the first shipment, or from the order date if nothing shipped
+ * - quantity: see returnableQuantities
+ */
+export function checkEligibility(
+  order: Order,
+  fulfillments: Fulfillment[],
+  requests: ReturnRequest[],
+  now = new Date(),
+): Eligibility {
+  const returnable = returnableQuantities(order, requests);
 
   if (!['PAID', 'PARTIALLY_REFUNDED'].includes(String(order.paymentStatus))) {
     return { eligible: false, reason: 'This order can’t be returned online. Please contact the store.', returnable };
   }
 
-  const shipDates = fulfillments
-    .map((f) => (f._createdDate ? new Date(f._createdDate).getTime() : NaN))
-    .filter((t) => !Number.isNaN(t));
+  const shipDates = shipmentTimes(fulfillments);
   const start = shipDates.length ? Math.min(...shipDates) : new Date(order._createdDate ?? now).getTime();
-  const windowEndsAt = new Date(start + RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const windowEndsAt = new Date(start + RETURN_WINDOW_DAYS * DAY_MS).toISOString();
 
   if (now.toISOString() > windowEndsAt) {
     return { eligible: false, reason: 'The return window for this order has closed.', windowEndsAt, returnable };
   }
   if (!Object.values(returnable).some((q) => q > 0)) {
-    return { eligible: false, reason: 'All items in this order already have a return or refund.', windowEndsAt, returnable };
+    return {
+      eligible: false,
+      reason: 'All items in this order already have a return, withdrawal or refund.',
+      windowEndsAt,
+      returnable,
+    };
+  }
+  return { eligible: true, windowEndsAt, returnable };
+}
+
+/**
+ * EU withdrawal rules (deliberately more generous than returns):
+ * - any order that isn't cancelled or fully refunded; no payment needed
+ * - open until the order is fulfilled, then WITHDRAWAL_PERIOD_DAYS plus a
+ *   delivery buffer from the last shipment (the period runs from receipt of
+ *   the last item)
+ * - quantity: see returnableQuantities
+ */
+export function checkWithdrawal(
+  order: Order,
+  fulfillments: Fulfillment[],
+  requests: ReturnRequest[],
+  now = new Date(),
+): Eligibility {
+  const returnable = returnableQuantities(order, requests);
+
+  if (order.status === 'CANCELED' || ['FULLY_REFUNDED', 'CANCELED', 'DECLINED'].includes(String(order.paymentStatus))) {
+    return { eligible: false, reason: 'This order has already been cancelled or refunded.', returnable };
+  }
+
+  let windowEndsAt: string | undefined;
+  if (order.fulfillmentStatus === 'FULFILLED') {
+    // Orders marked fulfilled without a shipment record count from the order date.
+    const shipDates = shipmentTimes(fulfillments);
+    const start = shipDates.length ? Math.max(...shipDates) : new Date(order._createdDate ?? now).getTime();
+    const days = WITHDRAWAL_PERIOD_DAYS + WITHDRAWAL_DELIVERY_BUFFER_DAYS;
+    windowEndsAt = new Date(start + days * DAY_MS).toISOString();
+    if (now.toISOString() > windowEndsAt) {
+      return { eligible: false, reason: 'The withdrawal period for this order has ended.', windowEndsAt, returnable };
+    }
+  }
+  if (!Object.values(returnable).some((q) => q > 0)) {
+    return {
+      eligible: false,
+      reason: 'All items in this order already have a return, withdrawal or refund.',
+      windowEndsAt,
+      returnable,
+    };
   }
   return { eligible: true, windowEndsAt, returnable };
 }

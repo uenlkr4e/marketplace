@@ -3,6 +3,7 @@ import {
   NOT_FOUND,
   withErrorHandling,
   checkEligibility,
+  checkWithdrawal,
   findCustomerOrder,
   getFulfillments,
   json,
@@ -47,6 +48,8 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
     listForOrder(caller.instanceId, order._id),
   ]);
   const eligibility = checkEligibility(order, fulfillments, requests);
+  const withdrawal = checkWithdrawal(order, fulfillments, requests);
+  const contact = order.billingInfo?.contactDetails;
 
   return json({
     number: order.number,
@@ -54,12 +57,14 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
     status: order.status,
     paymentStatus: order.paymentStatus,
     fulfillmentStatus: order.fulfillmentStatus,
+    customerName: [contact?.firstName, contact?.lastName].filter(Boolean).join(' '),
     lineItems: (order.lineItems ?? []).map((item) => ({
       id: item._id,
       name: item.productName?.translated ?? item.productName?.original ?? '',
       quantity: item.quantity ?? 0,
       image: item.image ?? null,
       returnableQuantity: (item._id && eligibility.returnable[item._id]) || 0,
+      withdrawableQuantity: (item._id && withdrawal.returnable[item._id]) || 0,
     })),
     shipments: fulfillments.map((f) => ({
       createdDate: f._createdDate,
@@ -74,12 +79,18 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
       reason: eligibility.reason ?? null,
       windowEndsAt: eligibility.windowEndsAt ?? null,
       requests: requests.map((r) => ({
+        kind: r.kind,
         rmaNumber: r.rmaNumber,
         status: r.status,
         createdDate: r.createdAt,
         items: r.items.map((i) => ({ name: i.name, quantity: i.quantity })),
         rejectionReason: r.status === 'REJECTED' ? r.merchantNote : null,
       })),
+    },
+    withdrawal: {
+      available: withdrawal.eligible,
+      reason: withdrawal.reason ?? null,
+      periodEndsAt: withdrawal.windowEndsAt ?? null,
     },
   });
 });
