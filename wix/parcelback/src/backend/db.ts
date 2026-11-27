@@ -151,24 +151,32 @@ export async function transition(
 
 /** The store's settings, or the defaults if it never saved any. */
 export async function getSettings(instanceId: string): Promise<StoreSettings> {
-  const [row] = (await sql()`select accept_returns, return_window_days, return_reasons
+  const [row] = (await sql()`select accept_returns, return_window_days, return_reasons, final_sale_products
                              from store_settings where instance_id = ${instanceId}`) as {
     accept_returns: boolean;
     return_window_days: number;
     return_reasons: string[];
+    final_sale_products: StoreSettings['finalSaleProducts'];
   }[];
   if (!row) return DEFAULT_SETTINGS;
-  return { acceptReturns: row.accept_returns, returnWindowDays: row.return_window_days, returnReasons: row.return_reasons };
+  return {
+    acceptReturns: row.accept_returns,
+    returnWindowDays: row.return_window_days,
+    returnReasons: row.return_reasons,
+    finalSaleProducts: row.final_sale_products,
+  };
 }
 
 export async function saveSettings(instanceId: string, settings: StoreSettings): Promise<StoreSettings> {
-  await sql()`insert into store_settings (instance_id, accept_returns, return_window_days, return_reasons)
+  await sql()`insert into store_settings
+                (instance_id, accept_returns, return_window_days, return_reasons, final_sale_products)
               values (${instanceId}, ${settings.acceptReturns}, ${settings.returnWindowDays},
-                      ${JSON.stringify(settings.returnReasons)}::jsonb)
+                      ${JSON.stringify(settings.returnReasons)}::jsonb, ${JSON.stringify(settings.finalSaleProducts)}::jsonb)
               on conflict (instance_id) do update
                 set accept_returns = excluded.accept_returns,
                     return_window_days = excluded.return_window_days,
                     return_reasons = excluded.return_reasons,
+                    final_sale_products = excluded.final_sale_products,
                     updated_at = now()`;
   return settings;
 }

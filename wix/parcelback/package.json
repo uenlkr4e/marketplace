@@ -21,6 +21,7 @@
     "@wix/ecom": "^1.0.2708",
     "@wix/editor": "^1.356.0",
     "@wix/essentials": "^1.0.15",
+    "@wix/stores": "^1.0.1010",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-to-webcomponent": "^2.0.0"

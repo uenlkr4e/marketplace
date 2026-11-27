@@ -66,3 +66,6 @@ create table if not exists order_locks (
   locked_until timestamptz not null,
   primary key (instance_id, order_id)
 );
+
+-- Final-sale products: [{ id, name }] by Wix Stores catalog item ID; excluded from returns, not from EU withdrawal. (added 2026-11-27)
+alter table store_settings add column if not exists final_sale_products jsonb not null default '[]'::jsonb;

@@ -16,13 +16,19 @@ import {
 import '@wix/design-system/styles.global.css';
 import { dashboard } from '@wix/dashboard';
 import { RETURN_REASONS } from '../../../../shared/returns';
-import { LIMITS, isBuiltInReason, validateSettings, type StoreSettings } from '../../../../shared/settings';
+import {
+  LIMITS,
+  isBuiltInReason,
+  validateSettings,
+  type FinalSaleProduct,
+  type StoreSettings,
+} from '../../../../shared/settings';
 import { call } from '../../api';
 
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 // The form keeps the window as text so a half-typed number doesn't jump around.
-type Draft = { acceptReturns: boolean; returnWindowDays: string; returnReasons: string[] };
+type Draft = Omit<StoreSettings, 'returnWindowDays'> & { returnWindowDays: string };
 
 const toDraft = (s: StoreSettings): Draft => ({ ...s, returnWindowDays: String(s.returnWindowDays) });
 const fromDraft = (d: Draft) => ({ ...d, returnWindowDays: Number(d.returnWindowDays) });
@@ -32,6 +38,9 @@ const SettingsPage: FC = () => {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [newReason, setNewReason] = useState('');
   const [saving, setSaving] = useState(false);
+  const [productQuery, setProductQuery] = useState('');
+  const [productResults, setProductResults] = useState<FinalSaleProduct[] | null>(null);
+  const [productError, setProductError] = useState<string | null>(null);
 
   useEffect(() => {
     call<{ settings: StoreSettings }>('merchant/settings')
@@ -41,6 +50,24 @@ const SettingsPage: FC = () => {
       })
       .catch((e) => dashboard.showToast({ message: `Couldn't load settings: ${errorMessage(e)}`, type: 'error' }));
   }, []);
+
+  // Product search for the final-sale list, debounced while typing.
+  useEffect(() => {
+    const text = productQuery.trim();
+    if (!text) {
+      setProductResults(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      call<{ products: FinalSaleProduct[] }>(`merchant/products?q=${encodeURIComponent(text)}`)
+        .then(({ products }) => {
+          setProductResults(products);
+          setProductError(null);
+        })
+        .catch((e) => setProductError(errorMessage(e)));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [productQuery]);
 
   const validation = useMemo(() => (draft ? validateSettings(fromDraft(draft)) : null), [draft]);
   const invalid = validation && 'error' in validation ? validation : null;
@@ -211,7 +238,7 @@ const SettingsPage: FC = () => {
                     infoContent={`Up to ${LIMITS.maxCustomReasons} custom reasons.`}
                   >
                     <Box gap="SP2">
-                      <Box width="320px">
+                      <div style={{ width: 320 }}>
                         <Input
                           value={newReason}
                           placeholder="e.g. Arrived too late"
@@ -220,13 +247,89 @@ const SettingsPage: FC = () => {
                           onChange={(e) => setNewReason(e.target.value)}
                           onEnterPressed={addReason}
                         />
-                      </Box>
+                      </div>
                       <Button priority="secondary" disabled={!canAdd || !draft.acceptReturns} onClick={addReason}>
                         Add
                       </Button>
                     </Box>
                   </FormField>
                   {invalid?.field === 'returnReasons' && <SectionHelper skin="danger">{error}</SectionHelper>}
+                </Box>
+              </Card.Content>
+            </Card>
+
+            <Card>
+              <Card.Header
+                title="Final sale products"
+                subtitle="These products can't be returned; the widget marks them as final sale. EU customers can still withdraw from the contract for them, unless a legal exemption applies."
+              />
+              <Card.Divider />
+              <Card.Content>
+                <Box direction="vertical" gap="SP4">
+                  {draft.finalSaleProducts.length ? (
+                    <Box direction="vertical" gap="SP2">
+                      {draft.finalSaleProducts.map((product) => (
+                        <Box key={product.id} gap="SP2" verticalAlign="middle">
+                          <Text>{product.name || product.id}</Text>
+                          <Button
+                            size="tiny"
+                            priority="secondary"
+                            skin="destructive"
+                            onClick={() =>
+                              update({ finalSaleProducts: draft.finalSaleProducts.filter((p) => p.id !== product.id) })
+                            }
+                          >
+                            Remove
+                          </Button>
+                        </Box>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Text size="small" secondary>
+                      No final sale products. All products can be returned.
+                    </Text>
+                  )}
+                  <FormField
+                    label="Add a product"
+                    status={productError ? 'error' : undefined}
+                    statusMessage={productError ? `Couldn't search products: ${productError}` : undefined}
+                  >
+                    <div style={{ width: 320 }}>
+                      <Input
+                        value={productQuery}
+                        placeholder="Search products by name"
+                        disabled={draft.finalSaleProducts.length >= LIMITS.maxFinalSaleProducts}
+                        onChange={(e) => setProductQuery(e.target.value)}
+                        clearButton
+                        onClear={() => setProductQuery('')}
+                      />
+                    </div>
+                  </FormField>
+                  {productResults && (
+                    <Box direction="vertical" gap="SP1">
+                      {productResults.length === 0 && (
+                        <Text size="small" secondary>
+                          No products found.
+                        </Text>
+                      )}
+                      {productResults.map((product) => {
+                        const added = draft.finalSaleProducts.some((p) => p.id === product.id);
+                        return (
+                          <Box key={product.id} gap="SP2" verticalAlign="middle">
+                            <Text size="small">{product.name}</Text>
+                            <Button
+                              size="tiny"
+                              priority="secondary"
+                              disabled={added}
+                              onClick={() => update({ finalSaleProducts: [...draft.finalSaleProducts, product] })}
+                            >
+                              {added ? 'Added' : 'Add'}
+                            </Button>
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  )}
                 </Box>
               </Card.Content>
             </Card>

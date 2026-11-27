@@ -147,12 +147,18 @@ function returnableQuantities(order: Order, requests: ReturnRequest[]): Record<s
   return returnable;
 }
 
+/** Whether a line item is one of the store's final-sale products (matched by catalog item ID). */
+export function isFinalSale(item: NonNullable<Order['lineItems']>[number], settings: StoreSettings): boolean {
+  const id = item.catalogReference?.catalogItemId;
+  return Boolean(id) && settings.finalSaleProducts.some((p) => p.id === id);
+}
+
 /**
  * Return rules:
  * - the store accepts returns (Settings page)
  * - the order must be paid (or partially refunded)
  * - the window runs settings.returnWindowDays from the first shipment, or from the order date if nothing shipped
- * - quantity: see returnableQuantities
+ * - quantity: see returnableQuantities; final-sale products can't be returned
  */
 export function checkEligibility(
   order: Order,
@@ -162,6 +168,12 @@ export function checkEligibility(
   now = new Date(),
 ): Eligibility {
   const returnable = returnableQuantities(order, requests);
+  const openFinalSale = (order.lineItems ?? []).some(
+    (item) => item._id && returnable[item._id] > 0 && isFinalSale(item, settings),
+  );
+  for (const item of order.lineItems ?? []) {
+    if (item._id && isFinalSale(item, settings)) returnable[item._id] = 0;
+  }
 
   if (!settings.acceptReturns) {
     return {
@@ -195,13 +207,21 @@ export function checkEligibility(
     };
   }
   if (!Object.values(returnable).some((q) => q > 0)) {
-    return {
-      eligible: false,
-      code: 'nothing_left',
-      reason: 'All items in this order already have a return, withdrawal or refund.',
-      windowEndsAt,
-      returnable,
-    };
+    return openFinalSale
+      ? {
+          eligible: false,
+          code: 'final_sale_only',
+          reason: 'The remaining items in this order are final sale and can’t be returned.',
+          windowEndsAt,
+          returnable,
+        }
+      : {
+          eligible: false,
+          code: 'nothing_left',
+          reason: 'All items in this order already have a return, withdrawal or refund.',
+          windowEndsAt,
+          returnable,
+        };
   }
   return { eligible: true, windowEndsAt, returnable };
 }

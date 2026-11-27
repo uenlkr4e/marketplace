@@ -56,7 +56,11 @@ REQUESTED ── approve ──► APPROVED ── receive ──► RECEIVED
 ```
 
 - **Eligibility** (`src/backend/returns.ts`): the store must accept returns, and the order must be paid or partially refunded. The window (30 days by default) runs from the first shipment, or from the order date if nothing has shipped. Returnable quantity = ordered − refunded (per Wix) − quantities held by open requests.
-- **Settings page** (`store_settings` table, `src/shared/settings.ts`): accept returns on/off, return window (1–365 days), return reasons (any of the six built-in ones, which the widget translates, plus up to five custom ones shown as typed). Stores that never saved settings get the defaults. The server validates the same rules as the dashboard, and `/return-request` only accepts the store's current reasons. Not yet: product exclusions (final sale).
+- **Settings page** (`store_settings` table, `src/shared/settings.ts`): accept returns on/off, return window (1–365 days), return reasons (any of the six built-in ones, which the widget translates, plus up to five custom ones shown as typed). Stores that never saved settings get the defaults. The server validates the same rules as the dashboard, and `/return-request` only accepts the store's current reasons. - **Final sale products** (`final_sale_products` in `store_settings`):
+  - Merchants pick products with a search on the Settings page (`GET /merchant/products?q=`, `src/backend/catalog.ts`). It works on both Wix Stores catalog V1 and V3; the dev site is V3.
+  - Matching line items (`catalogReference.catalogItemId`) can't be returned, and the widget labels them "Final sale" (translated).
+  - If only final-sale items are left, the widget says so (`final_sale_only`).
+  - Withdrawals ignore the list: EU law doesn't exempt "final sale", so the merchant rejects exempt goods case by case.
 - **Refund:**
   - If the provider can refund the payment: automatic refund to the original payment method.
   - Otherwise (e.g. offline payments): the refund is recorded in Wix (`externalRefund`) and the merchant sends the money themselves.
@@ -92,7 +96,10 @@ The site widget is translated into **English, German, French, Spanish, Italian, 
 
 ## Setup
 
-1. Permissions: Wix Stores **Read Orders** and **Manage Orders** (Wix Data permissions were removed).
+1. Permissions:
+   - Wix Stores **Read Orders** and **Manage Orders**.
+   - **Read Products** (catalog V1), **Read products in v3 catalog** and **Read v3 catalog (PII)** (catalog version check) for the final-sale picker. Added 2026-11-27; sites with an older version installed must approve them when they update.
+   - Wix Data permissions were removed.
 2. Database: Neon Postgres, `eu-central-1`.
    - The connection string is a Wix secret: `npx wix app env set --key DATABASE_URL --value "<url>"`, then `npx wix app env pull`. It's written to `.env.local`, which git ignores.
    - Schema: `db/schema.sql`. Apply it with `npm run db:migrate`, which is safe to re-run.
@@ -122,6 +129,14 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [x] Dashboard: badge, name, "Refund due by", reject warning; CSV export (6 rows × 15 columns, history included)
 - [x] Editor widget settings: "EU withdrawal button" toggle (off by default) shows and hides the "Withdraw from contract here" link immediately
 - [x] Acknowledgement email received in a real inbox with all details filled in
+
+**Final sale products (2026-11-27):**
+
+- [x] Product search on the dev site (catalog V3): "cer", "Ceramic", "Vase" find Ceramic Flower Vase; "round" finds Round Eyeglasses
+- [x] Marked Ceramic Flower Vase as final sale, saved, reloaded: the lookup of #10003 shows "Ceramic Flower Vase × 1 · Final sale" and `finalSale: true`
+- [x] Eligibility, tested directly: in a mixed order only the normal items can be returned; with only final-sale items left the code is `final_sale_only`; withdrawal still includes final-sale items
+- [x] Dev site restored to no final-sale products
+- [ ] Catalog V1 path (needs a V1 store)
 
 **Rate limits and order lock (2026-11-27):**
 
@@ -159,6 +174,6 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [ ] Automatic card refund (needs an order paid through a refundable provider)
 - [ ] EU withdrawal: legal review of the flow and wording (including the translated button labels); a model withdrawal form link
 - [ ] Translations were written without a native-speaker review; customer emails and the dashboard are English only
-- [ ] Product exclusions (final sale) on the Settings page; partial-quantity refunds, multi-payment orders, shipping refunds
+- [ ] Partial-quantity refunds, multi-payment orders, shipping refunds
 - [ ] Rotate the Neon password (it was shared in a chat) and re-run `wix app env set`
 - [ ] Thank-you page plugin slot isn't offered by `wix app generate` yet

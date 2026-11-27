@@ -7,7 +7,14 @@ type Shipment = {
   trackingLink: string | null;
 };
 
-type LineItem = { id: string; name: string; quantity: number; returnableQuantity: number; withdrawableQuantity: number };
+type LineItem = {
+  id: string;
+  name: string;
+  quantity: number;
+  returnableQuantity: number;
+  withdrawableQuantity: number;
+  finalSale: boolean;
+};
 
 type LookupResult = {
   number: string;
@@ -167,7 +174,9 @@ class OrderLookup extends HTMLElement {
 
   private renderResult(customer: Customer, order: LookupResult, notice?: Node) {
     const t = this.t;
-    const items = order.lineItems.map((i) => el('li', { textContent: `${i.name} × ${i.quantity}` }));
+    const items = order.lineItems.map((i) =>
+      el('li', { textContent: `${i.name} × ${i.quantity}${i.finalSale ? ` · ${t('finalSale')}` : ''}` }),
+    );
 
     const shipments = order.shipments.length
       ? order.shipments.map((s) => {

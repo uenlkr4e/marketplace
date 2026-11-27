@@ -9,12 +9,18 @@ export type StoreSettings = {
   // Reasons offered in the return form, in display order. Built-in reasons
   // (RETURN_REASONS) are translated in the widget; custom ones are shown as typed.
   returnReasons: string[];
+  // Wix Stores products that can't be returned. They can still be withdrawn
+  // from under EU law; legal exemptions are decided case by case.
+  finalSaleProducts: FinalSaleProduct[];
 };
+
+export type FinalSaleProduct = { id: string; name: string };
 
 export const DEFAULT_SETTINGS: StoreSettings = {
   acceptReturns: true,
   returnWindowDays: RETURN_WINDOW_DAYS,
   returnReasons: [...RETURN_REASONS],
+  finalSaleProducts: [],
 };
 
 export const LIMITS = {
@@ -23,6 +29,7 @@ export const LIMITS = {
   maxReasons: 12,
   maxCustomReasons: 5,
   maxReasonLength: 60,
+  maxFinalSaleProducts: 200,
 };
 
 export const isBuiltInReason = (reason: string) => (RETURN_REASONS as readonly string[]).includes(reason);
@@ -63,5 +70,19 @@ export function validateSettings(input: unknown): { settings: StoreSettings } | 
     return { error: `Add at most ${LIMITS.maxCustomReasons} custom reasons.`, field: 'returnReasons' };
   }
 
-  return { settings: { acceptReturns: raw.acceptReturns, returnWindowDays: days, returnReasons: reasons } };
+  if (!Array.isArray(raw.finalSaleProducts)) return { error: 'Invalid final sale products.', field: 'finalSaleProducts' };
+  const finalSaleProducts: FinalSaleProduct[] = [];
+  for (const value of raw.finalSaleProducts) {
+    const id = String((value as { id?: unknown })?.id ?? '');
+    const name = String((value as { name?: unknown })?.name ?? '').trim().slice(0, 200);
+    if (!/^[\w-]{1,100}$/.test(id)) return { error: 'Invalid final sale products.', field: 'finalSaleProducts' };
+    if (!finalSaleProducts.some((p) => p.id === id)) finalSaleProducts.push({ id, name });
+  }
+  if (finalSaleProducts.length > LIMITS.maxFinalSaleProducts) {
+    return { error: `Mark at most ${LIMITS.maxFinalSaleProducts} products as final sale.`, field: 'finalSaleProducts' };
+  }
+
+  return {
+    settings: { acceptReturns: raw.acceptReturns, returnWindowDays: days, returnReasons: reasons, finalSaleProducts },
+  };
 }

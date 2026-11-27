@@ -5,6 +5,7 @@ import {
   checkEligibility,
   checkWithdrawal,
   findCustomerOrder,
+  isFinalSale,
   getFulfillments,
   fail,
   json,
@@ -76,6 +77,7 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
       image: item.image ?? null,
       returnableQuantity: (item._id && eligibility.returnable[item._id]) || 0,
       withdrawableQuantity: (item._id && withdrawal.returnable[item._id]) || 0,
+      finalSale: isFinalSale(item, settings),
     })),
     shipments: fulfillments.map((f) => ({
       createdDate: f._createdDate,
