@@ -22,8 +22,8 @@ To re-render after a change: run `python docs/app-market/src/generate.py`, then 
 
 - [x] App Info: name, teaser, four features, full description, terms URL and icon saved
 - [x] Media: the five listing images (in order) and the promotional banner saved
-- [ ] Company Info: privacy policy URL, company details
-- [ ] Contact Info: support, billing and urgent emails, phone number
+- [x] Company Info (2026-11-28): listed as an individual, Shane Ulker; Parcelback icon as logo; street-level address (Selçuk, Hacı Bekir Sokak, Selçuklu/Konya, Türkiye); website and privacy policy links
+- [x] Contact Info (2026-11-28): support@parcelback.app for support, billing and urgent (split later once billing@ and urgent@ forward); phone +90 554 385 2295
 - [ ] Get Found: keywords and category (below)
 - [ ] Demo site URL (after the first release)
 
@@ -56,7 +56,7 @@ To re-render after a change: run `python docs/app-market/src/generate.py`, then 
 
 **Privacy policy URL** (Company Info): https://parcelback.app/privacy
 
-**Support:** support@parcelback.app · **Billing:** billing@parcelback.app · **Urgent:** urgent@parcelback.app (forward these in Cloudflare Email Routing)
+**Support / billing / urgent:** support@parcelback.app for now. To split them, add billing@ and urgent@ in Cloudflare Email Routing first, then update Contact Info.
 
 **Search keywords** (5): returns, order tracking, refunds, returns portal, EU withdrawal
 
