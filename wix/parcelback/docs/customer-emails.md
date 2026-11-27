@@ -86,6 +86,6 @@ The law requires confirming receipt "on a durable medium" with the content and t
 - [x] Real-inbox test (2026-11-27): requested, approved and rejected emails received at the owner's address with all variables filled in.
 - [x] Exported as **pre-installed automations** (2026-11-27): all three, default status Active, merchants can edit step settings. They take effect when a released app version is installed; the triggers must be live (released) for them to run. Export path: site Automations in Advanced Mode → ⋯ → Generate link → app dashboard → Automations → Pre-installed → paste link.
 - [x] Rejecting requires a reason (dashboard window + server check). It's stored as `merchant_note`, shown in the rejection email and in the order lookup widget. Approving needs no note. Tested 2026-11-27 with R10004-2.
-- [x] Withdrawal (2026-11-27): trigger `withdrawal_received` created with `contact_id` connected; site automation "Withdrawal received: confirmation email" active (wording via "Configure with AI"; it signs off "The team" rather than the site name); exported as pre-installed, default Active. Real-inbox check pending.
+- [x] Withdrawal (2026-11-27): trigger `withdrawal_received` created with `contact_id` connected; site automation "Withdrawal received: confirmation email" active (wording via "Configure with AI"; it signs off "The team" rather than the site name); exported as pre-installed, default Active. Real-inbox test passed.
 
 Note: Wix's automation emails count against the **store's** email quota (200 a month on a free site).

@@ -101,8 +101,8 @@ npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 - [x] Widget (editor preview, button switched on through the attribute): "Withdraw from contract here" → lookup of #10004 → name prefilled, item preselected → "Confirm withdrawal here" → `W10004-3` with timestamp; the order view then lists it as "Withdrawal … (Received)"
 - [x] `withdrawal_received` reported without errors. The site automation "Withdrawal received: confirmation email" is active and exported as pre-installed.
 - [x] Dashboard: badge, name, "Refund due by", reject warning; CSV export (6 rows × 15 columns, history included)
-- [ ] Panel toggle in the editor's widget settings (same `setProp` pattern as the heading)
-- [ ] Acknowledgement email in a real inbox
+- [x] Editor widget settings: "EU withdrawal button" toggle (off by default) shows and hides the "Withdraw from contract here" link immediately
+- [x] Acknowledgement email received in a real inbox with all details filled in
 
 **Returns (2026-11-26, Neon backend):**
 
