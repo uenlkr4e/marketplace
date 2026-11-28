@@ -125,6 +125,13 @@ npm run db:delete-store -- <instanceId>   # delete one store's data (support req
 
 ## Tested
 
+**Member orders (2026-11-28, `wix app dev`, main dev site preview):**
+
+- [x] Visitor: `/my-orders` answers `{"member":false,"orders":[]}` and the plain form shows
+- [x] Guest lookup of #10004 with its email still works
+- [x] Order number without an email from a non-member: `400 invalid_customer` (the server only drops the email for the member's own orders)
+- [ ] Logged-in member: order list, one-click lookup, return and withdrawal without an email. Editor preview doesn't send a member token, so test this on the demo site after the next release.
+
 **EU withdrawal (2026-11-27):**
 
 - [x] Widget (editor preview, button switched on through the attribute): "Withdraw from contract here" → lookup of #10004 → name prefilled, item preselected → "Confirm withdrawal here" → `W10004-3` with timestamp; the order view then lists it as "Withdrawal … (Received)"

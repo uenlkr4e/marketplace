@@ -3,6 +3,7 @@ import {
   NOT_FOUND,
   withErrorHandling,
   buildItems,
+  customerEmailFor,
   checkWithdrawal,
   findCustomerOrder,
   getFulfillments,
@@ -12,7 +13,7 @@ import {
   tooManyRequests,
   parseItems,
 } from '../backend/returns';
-import { getCaller } from '../backend/caller';
+import { getCaller, memberIdOf } from '../backend/caller';
 import { checkLimits, recordFailedLookup } from '../backend/limits';
 import { notifyCustomer } from '../backend/notify';
 import { insertRequest, listForOrder, withOrderLock } from '../backend/db';
@@ -21,6 +22,7 @@ import { WITHDRAWAL_REASON, roundMoney } from '../shared/returns';
 /**
  * POST /withdrawal
  *   { orderNumber, email, name, items?: [{ lineItemId, quantity }], note? }
+ *   (email may be left out for a logged-in member's own order)
  *
  * EU withdrawal declaration ("Confirm withdrawal here"). No reason is asked
  * for. Without items, the customer withdraws from everything still open on
@@ -36,7 +38,13 @@ export const POST: APIRoute = withErrorHandling('withdrawal', async ({ request }
     return fail('invalid_request', 'Invalid request.', 400);
   }
 
-  const customer = parseCustomer(body);
+  const caller = await getCaller();
+  if (!caller) {
+    return fail('invalid_request', 'Invalid request.', 401);
+  }
+  const memberId = memberIdOf(caller);
+
+  const customer = parseCustomer(body, Boolean(memberId));
   if (!customer) {
     return fail('invalid_customer', 'Please enter a valid order number and email.', 400);
   }
@@ -46,17 +54,12 @@ export const POST: APIRoute = withErrorHandling('withdrawal', async ({ request }
   }
   const customerNote = String(body.note ?? '').trim().slice(0, 1000);
 
-  const caller = await getCaller();
-  if (!caller) {
-    return fail('invalid_request', 'Invalid request.', 401);
-  }
-
   const limited = await checkLimits(request, caller);
   if (limited) {
     return tooManyRequests(limited);
   }
 
-  const order = await findCustomerOrder(customer.orderNumber, customer.email);
+  const order = await findCustomerOrder(customer.orderNumber, customer.email, memberId);
   if (!order?._id) {
     await recordFailedLookup(request, caller);
     return json(NOT_FOUND, 404);
@@ -86,7 +89,7 @@ export const POST: APIRoute = withErrorHandling('withdrawal', async ({ request }
       kind: 'WITHDRAWAL',
       orderId,
       orderNumber: String(order.number),
-      customerEmail: customer.email,
+      customerEmail: customerEmailFor(order, customer.email),
       customerName: name,
       contactId: order.buyerInfo?.contactId ?? null,
       items,

@@ -4,6 +4,7 @@ import {
   withErrorHandling,
   checkEligibility,
   checkWithdrawal,
+  customerEmailFor,
   findCustomerOrder,
   isFinalSale,
   getFulfillments,
@@ -12,25 +13,32 @@ import {
   parseCustomer,
   tooManyRequests,
 } from '../backend/returns';
-import { getCaller } from '../backend/caller';
+import { getCaller, memberIdOf } from '../backend/caller';
 import { checkLimits, recordFailedLookup } from '../backend/limits';
 import { getSettings, listForOrder } from '../backend/db';
 
 /**
  * POST /order-lookup  { orderNumber, email }
  *
- * Guest order lookup for the storefront widget. Order access is elevated, so
- * data is only returned when BOTH the order number and the buyer email match,
- * and "no such order" and "wrong email" get the same 404 so the endpoint
- * can't be used to discover order numbers.
+ * Order lookup for the storefront widget. Order access is elevated, so data
+ * is only returned when the order number and the buyer email match, or when
+ * the order belongs to the logged-in member (who may leave the email out).
+ * "No such order" and "wrong email" get the same 404 so the endpoint can't be
+ * used to discover order numbers.
  *
  * Rate-limited per client and per store (src/backend/limits.ts); failed
  * lookups count separately, so guessing is cut off quickly.
  */
 export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request }) => {
+  const caller = await getCaller();
+  if (!caller) {
+    return fail('invalid_request', 'Invalid request.', 401);
+  }
+  const memberId = memberIdOf(caller);
+
   let customer: ReturnType<typeof parseCustomer>;
   try {
-    customer = parseCustomer(await request.json());
+    customer = parseCustomer(await request.json(), Boolean(memberId));
   } catch {
     return fail('invalid_request', 'Invalid request.', 400);
   }
@@ -38,17 +46,12 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
     return fail('invalid_customer', 'Please enter a valid order number and email.', 400);
   }
 
-  const caller = await getCaller();
-  if (!caller) {
-    return fail('invalid_request', 'Invalid request.', 401);
-  }
-
   const limited = await checkLimits(request, caller);
   if (limited) {
     return tooManyRequests(limited);
   }
 
-  const order = await findCustomerOrder(customer.orderNumber, customer.email);
+  const order = await findCustomerOrder(customer.orderNumber, customer.email, memberId);
   if (!order?._id) {
     await recordFailedLookup(request, caller);
     return json(NOT_FOUND, 404);
@@ -70,6 +73,7 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
     paymentStatus: order.paymentStatus,
     fulfillmentStatus: order.fulfillmentStatus,
     customerName: [contact?.firstName, contact?.lastName].filter(Boolean).join(' '),
+    email: customerEmailFor(order, customer.email),
     lineItems: (order.lineItems ?? []).map((item) => ({
       id: item._id,
       name: item.productName?.translated ?? item.productName?.original ?? '',

@@ -3,6 +3,7 @@ import {
   NOT_FOUND,
   withErrorHandling,
   buildItems,
+  customerEmailFor,
   checkEligibility,
   findCustomerOrder,
   getFulfillments,
@@ -12,7 +13,7 @@ import {
   tooManyRequests,
   parseItems,
 } from '../backend/returns';
-import { getCaller } from '../backend/caller';
+import { getCaller, memberIdOf } from '../backend/caller';
 import { checkLimits, recordFailedLookup } from '../backend/limits';
 import { notifyCustomer } from '../backend/notify';
 import { getSettings, insertRequest, listForOrder, withOrderLock } from '../backend/db';
@@ -21,6 +22,7 @@ import { roundMoney } from '../shared/returns';
 /**
  * POST /return-request
  *   { orderNumber, email, items: [{ lineItemId, quantity }], reason, note? }
+ *   (email may be left out for a logged-in member's own order)
  *
  * Re-verifies the customer and eligibility on the server (never trust the
  * widget), then stores a REQUESTED return with an RMA number.
@@ -35,7 +37,13 @@ export const POST: APIRoute = withErrorHandling('return-request', async ({ reque
     return fail('invalid_request', 'Invalid request.', 400);
   }
 
-  const customer = parseCustomer(body);
+  const caller = await getCaller();
+  if (!caller) {
+    return fail('invalid_request', 'Invalid request.', 401);
+  }
+  const memberId = memberIdOf(caller);
+
+  const customer = parseCustomer(body, Boolean(memberId));
   if (!customer) {
     return fail('invalid_customer', 'Please enter a valid order number and email.', 400);
   }
@@ -48,11 +56,6 @@ export const POST: APIRoute = withErrorHandling('return-request', async ({ reque
     return fail('items_required', 'Please choose at least one item to return.', 400);
   }
 
-  const caller = await getCaller();
-  if (!caller) {
-    return fail('invalid_request', 'Invalid request.', 401);
-  }
-
   const limited = await checkLimits(request, caller);
   if (limited) {
     return tooManyRequests(limited);
@@ -63,7 +66,7 @@ export const POST: APIRoute = withErrorHandling('return-request', async ({ reque
     return fail('reason_required', 'Please choose a reason for the return.', 400);
   }
 
-  const order = await findCustomerOrder(customer.orderNumber, customer.email);
+  const order = await findCustomerOrder(customer.orderNumber, customer.email, memberId);
   if (!order?._id) {
     await recordFailedLookup(request, caller);
     return json(NOT_FOUND, 404);
@@ -89,7 +92,7 @@ export const POST: APIRoute = withErrorHandling('return-request', async ({ reque
       kind: 'RETURN',
       orderId,
       orderNumber: String(order.number),
-      customerEmail: customer.email,
+      customerEmail: customerEmailFor(order, customer.email),
       customerName: null,
       contactId: order.buyerInfo?.contactId ?? null,
       items,

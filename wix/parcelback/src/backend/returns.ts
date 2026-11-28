@@ -14,8 +14,9 @@ import { OrderBusyError } from './db';
 import type { Limited } from './limits';
 
 // Backend-only helpers. Wix calls here run with elevated permissions, so
-// customer-facing callers must verify the customer (order number + email)
-// first, and merchant callers must be checked with getMerchant().
+// customer-facing callers must verify the customer (order number + email, or
+// a logged-in member's own order) first, and merchant callers must be checked
+// with getMerchant().
 
 const searchOrders = auth.elevate(orders.searchOrders);
 const listFulfillments = auth.elevate(orderFulfillments.listFulfillmentsForSingleOrder);
@@ -59,21 +60,41 @@ export function withErrorHandling<A extends unknown[]>(name: string, handler: (.
   };
 }
 
-export function parseCustomer(body: { orderNumber?: unknown; email?: unknown }) {
+/** Order number and buyer email. Logged-in members may leave the email out for their own orders. */
+export function parseCustomer(body: { orderNumber?: unknown; email?: unknown }, isMember = false) {
   const orderNumber = String(body.orderNumber ?? '').trim().replace(/^#/, '');
   const email = String(body.email ?? '').trim().toLowerCase();
-  const valid = /^\d{1,20}$/.test(orderNumber) && email.includes('@') && email.length <= 254;
-  return valid ? { orderNumber, email } : null;
+  const emailValid = email ? email.includes('@') && email.length <= 254 : isMember;
+  return /^\d{1,20}$/.test(orderNumber) && emailValid ? { orderNumber, email } : null;
 }
 
-/** Returns the order only when both the number and the buyer email match. */
-export async function findCustomerOrder(orderNumber: string, email: string): Promise<Order | null> {
+/**
+ * Returns the order only when the number matches and either the buyer email
+ * matches or the order belongs to the logged-in member making the request.
+ */
+export async function findCustomerOrder(orderNumber: string, email: string, memberId: string | null): Promise<Order | null> {
   const { orders: found = [] } = await searchOrders({
     filter: { number: { $eq: orderNumber } },
     cursorPaging: { limit: 1 },
   });
   const order = found[0];
-  return order?._id && order.buyerInfo?.email?.toLowerCase() === email ? order : null;
+  if (!order?._id) return null;
+  const emailMatches = Boolean(email) && order.buyerInfo?.email?.toLowerCase() === email;
+  const memberMatches = Boolean(memberId) && order.buyerInfo?.memberId === memberId;
+  return emailMatches || memberMatches ? order : null;
+}
+
+/** The email to store and confirm to: the one the customer entered, else the order's buyer email. */
+export const customerEmailFor = (order: Order, email: string) => email || order.buyerInfo?.email?.toLowerCase() || '';
+
+/** A logged-in member's most recent orders, newest first. */
+export async function listMemberOrders(memberId: string, limit = 20): Promise<Order[]> {
+  const { orders: found = [] } = await searchOrders({
+    filter: { 'buyerInfo.memberId': { $eq: memberId } },
+    sort: [{ fieldName: '_createdDate', order: 'DESC' }],
+    cursorPaging: { limit },
+  });
+  return found;
 }
 
 export async function getFulfillments(orderId: string): Promise<Fulfillment[]> {

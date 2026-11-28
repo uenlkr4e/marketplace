@@ -9,6 +9,9 @@ export async function getCaller(): Promise<Caller | null> {
   return { instanceId: info.instanceId, subjectType: info.subjectType, subjectId: info.subjectId };
 }
 
+/** The member ID when the caller is a logged-in site member, else null. */
+export const memberIdOf = (caller: Caller) => (caller.subjectType === 'MEMBER' ? caller.subjectId : null);
+
 /** Merchant endpoints: only Wix users (site owner or collaborators in the dashboard). */
 export async function getMerchant(): Promise<Caller | null> {
   const caller = await getCaller();

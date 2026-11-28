@@ -21,6 +21,7 @@ type LookupResult = {
   createdDate: string;
   fulfillmentStatus: string;
   customerName: string;
+  email: string; // where confirmations go: the entered email, or the order's for members
   lineItems: LineItem[];
   shipments: Shipment[];
   returns: {
@@ -42,7 +43,16 @@ type LookupResult = {
 
 type Mode = 'track' | 'withdraw';
 
+// A logged-in member's own orders are looked up without an email (empty string).
 type Customer = { orderNumber: string; email: string };
+
+type MemberOrder = {
+  number: string;
+  createdDate: string;
+  fulfillmentStatus: string;
+  itemCount: number;
+  total: string | null;
+};
 
 // Explicit defaults: Wix themes reset buttons and font sizes, which left the
 // widget's buttons looking like plain text on a live site.
@@ -80,6 +90,13 @@ const STYLES = `
   order-lookup .abo-muted { opacity: 0.75; }
   order-lookup .abo-row { display: flex; gap: 10px; align-items: center; }
   order-lookup .abo-row label { flex: 1; }
+  order-lookup .abo-orders { display: grid; gap: 8px; margin: 4px 0 16px; }
+  order-lookup .abo-card button.abo-order {
+    width: 100%; margin: 0; text-align: left; font-weight: 400; line-height: 1.4;
+    background: transparent; color: #1f1f1f; border-color: #d9d9d9;
+  }
+  order-lookup .abo-card button.abo-order:hover { background: #f2f2f2; border-color: #b9b9b9; }
+  order-lookup .abo-order strong { font-weight: 700; }
 `;
 
 // Builds an element; all text goes through textContent, never parsed as HTML.
@@ -138,8 +155,50 @@ class OrderLookup extends HTMLElement {
     return code && this.t.has(key) ? this.t(key) : (fallback ?? this.t('genericError'));
   }
 
+  // Orders of the logged-in member, loaded once per page view; empty for visitors.
+  private memberOrders: MemberOrder[] = [];
+  private memberOrdersSlot: HTMLElement | null = null;
+
   connectedCallback() {
     this.renderForm();
+    void this.loadMemberOrders();
+  }
+
+  private async loadMemberOrders() {
+    try {
+      const { ok, body } = await post('my-orders', {});
+      if (!ok || !body.orders?.length) return;
+      this.memberOrders = body.orders as MemberOrder[];
+      // Fill the list in place if the form is still showing, so nothing the customer typed is lost.
+      if (this.memberOrdersSlot?.isConnected) this.fillMemberOrders(this.memberOrdersSlot);
+    } catch {
+      // The form still works without the list.
+    }
+  }
+
+  private fillMemberOrders(slot: HTMLElement, mode: Mode = 'track') {
+    const t = this.t;
+    if (!this.memberOrders.length) return;
+    const buttons = this.memberOrders.map((order) => {
+      const fulfillmentKey = `fulfillment.${order.fulfillmentStatus}`;
+      const status = t.has(fulfillmentKey) ? t(fulfillmentKey) : order.fulfillmentStatus;
+      const details = [this.date(order.createdDate), status, order.total].filter(Boolean).join(' · ');
+      const button = el('button', { type: 'button', className: 'abo-order' }, [
+        el('strong', { textContent: t('orderHeading', { number: order.number }) }),
+        el('br'),
+        el('span', { className: 'abo-muted', textContent: details }),
+      ]);
+      button.addEventListener('click', () => {
+        button.disabled = true;
+        void this.lookup({ orderNumber: String(order.number), email: '' }, mode);
+      });
+      return button;
+    });
+    slot.replaceChildren(
+      el('h3', { textContent: t('yourOrders') }),
+      el('div', { className: 'abo-orders' }, buttons),
+      el('p', { className: 'abo-muted', textContent: t('otherOrder') }),
+    );
   }
 
   attributeChangedCallback() {
@@ -166,11 +225,15 @@ class OrderLookup extends HTMLElement {
       void this.lookup({ orderNumber: orderNumber.value, email: email.value }, mode);
     });
 
+    const memberOrders = el('div');
+    this.memberOrdersSlot = memberOrders;
+    this.fillMemberOrders(memberOrders, mode);
+
     if (mode === 'withdraw') {
       const back = el('button', { type: 'button', className: 'abo-link', textContent: t('back') });
       back.addEventListener('click', () => this.renderForm());
       form.append(back);
-      this.mount(el('h2', { textContent: t('withdrawTitle') }), el('p', { textContent: t('withdrawIntro') }), form);
+      this.mount(el('h2', { textContent: t('withdrawTitle') }), el('p', { textContent: t('withdrawIntro') }), memberOrders, form);
       return;
     }
     if (this.withdrawalEnabled) {
@@ -178,7 +241,7 @@ class OrderLookup extends HTMLElement {
       withdraw.addEventListener('click', () => this.renderForm('', 'withdraw'));
       form.append(withdraw);
     }
-    this.mount(el('h2', { textContent: this.getAttribute('display-name') || t('title') }), form);
+    this.mount(el('h2', { textContent: this.getAttribute('display-name') || t('title') }), memberOrders, form);
   }
 
   private async lookup(customer: Customer, mode: Mode = 'track') {
@@ -389,7 +452,7 @@ class OrderLookup extends HTMLElement {
     const form = el('form', {}, [
       ...rows.map((r) => r.row),
       name,
-      el('p', { className: 'abo-muted', textContent: t('confirmationTo', { email: customer.email }) }),
+      el('p', { className: 'abo-muted', textContent: t('confirmationTo', { email: order.email }) }),
       note,
       submit,
       cancel,
@@ -440,7 +503,7 @@ class OrderLookup extends HTMLElement {
         confirmation,
         el('p', { textContent: t('reference', { reference: receipt.reference }) }),
         el('ul', {}, receipt.items.map((i) => el('li', { textContent: `${i.name} × ${i.quantity}` }))),
-        el('p', { className: 'abo-muted', textContent: t('withdrawalNext', { email: customer.email }) }),
+        el('p', { className: 'abo-muted', textContent: t('withdrawalNext', { email: order.email }) }),
         back,
       );
     } catch {
