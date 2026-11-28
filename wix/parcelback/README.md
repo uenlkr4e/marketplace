@@ -132,12 +132,13 @@ npm run db:delete-store -- <instanceId>   # delete one store's data (support req
 - [x] Refund dialog → "Store credit (single-use discount code)" on R10002-1 ($119): 200, request CREDITED, coupon `CR10002-1-VEQL` created in Wix (read back with the Coupons API: usage limit 1, $119 off, stores scope, our app ID), 12-month expiry stored
 - [x] Order page shows "Store credit issued" with the code, amount and expiry
 - [x] Withdrawals: the dialog doesn't offer store credit and the endpoint refuses it (EU: refund with the same means of payment)
-- [ ] The coupon doesn't appear in the site's Coupons list (filter shows nothing either), though the API returns it. Redeeming the code at checkout is untested: test on the demo site's shop after release.
+- [ ] The coupon doesn't appear in the site's Coupons list (filter shows nothing either), though the API returns it and checkout accepts it (see below). Probably Wix hides app-created coupons there.
 - [ ] That first coupon was created with Wix's default `limitedToOneItem: true` (discount capped at the cheapest item); fixed afterwards by setting it to false, not yet re-tested
 - [x] "Store credit issued" trigger created in the app dashboard (key `store_credit_issued`; fields: contact, return and order number, items, code, amount, valid-until date)
 - [x] Pre-installed automation "Store credit issued: customer email" (active by default): built on the main dev site by duplicating the approval email and switching the trigger, then added under Develop > Automations > Pre-installed. The site only saw the new trigger after "Test App > Test on dev site > test from here", which installs the app's latest dashboard changes. The first "Generate link" attempt failed; the second worked.
 - [x] 2.0.0 released (major: Manage Coupons permission); "Store credit issued" trigger published (2026-11-28). Publishing a trigger leaves a "Draft version" with unreleased changes in the app dashboard until the next CLI release; that's expected.
-- [ ] Issue a credit on 2.0 and check the email arrives with the code; redeem the code at checkout
+- [x] 2.1.0 (first release built from current code), demo site (2026-11-28): order #10003 → return R10003-1 (Baseball Cap) through the live widget → approved → store credit $68: request CREDITED, coupon `CR10003-1-3R47`; "Store credit issued: customer email" ran (triggered 1 time, to demo@parcelback.app)
+- [x] Code accepted at checkout: Ceramic Flower Vase $270 → $202 ("You saved $68.00"); not placed as an order. Sidebar group and "Parcelback 2.0.0" version line visible on the demo site's dashboard
 
 **Return instructions and per-item restock (2026-11-28, `wix app dev`, main dev site):**
 
