@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import type { HistoryEntry, RequestKind, ReturnItem, ReturnRequest, ReturnStatus } from '../shared/returns';
+import type { HistoryEntry, RequestKind, ReturnItem, ReturnRequest, ReturnStatus, StoreCredit } from '../shared/returns';
 import { DEFAULT_SETTINGS, type StoreSettings } from '../shared/settings';
 
 // Data access for return requests and store settings. Every function takes the Wix app
@@ -35,6 +35,9 @@ type Row = {
   status: ReturnStatus;
   merchant_note: string | null;
   refunded_amount: string | null;
+  credit_code: string | null;
+  credit_amount: string | null;
+  credit_expires_at: string | Date | null;
   history: HistoryEntry[];
   created_at: string | Date;
   updated_at: string | Date;
@@ -57,6 +60,10 @@ const toRequest = (r: Row): ReturnRequest => ({
   status: r.status,
   merchantNote: r.merchant_note,
   refundedAmount: r.refunded_amount === null ? null : Number(r.refunded_amount),
+  credit:
+    r.credit_code && r.credit_amount !== null && r.credit_expires_at
+      ? { code: r.credit_code, amount: Number(r.credit_amount), expiresAt: new Date(r.credit_expires_at).toISOString() }
+      : null,
   history: r.history,
   createdAt: new Date(r.created_at).toISOString(),
   updatedAt: new Date(r.updated_at).toISOString(),
@@ -91,7 +98,7 @@ export async function getById(instanceId: string, id: string): Promise<ReturnReq
 
 export type NewReturnRequest = Omit<
   ReturnRequest,
-  'id' | 'rmaNumber' | 'status' | 'merchantNote' | 'refundedAmount' | 'history' | 'createdAt' | 'updatedAt'
+  'id' | 'rmaNumber' | 'status' | 'merchantNote' | 'refundedAmount' | 'credit' | 'history' | 'createdAt' | 'updatedAt'
 >;
 
 /**
@@ -132,7 +139,7 @@ export async function transition(
   id: string,
   from: ReturnStatus[],
   to: ReturnStatus,
-  extra: { note?: string; merchantNote?: string; refundedAmount?: number } = {},
+  extra: { note?: string; merchantNote?: string; refundedAmount?: number; credit?: StoreCredit & { couponId: string } } = {},
 ): Promise<ReturnRequest | null> {
   if (!isUuid(id)) return null;
   const entry = JSON.stringify([{ status: to, at: new Date().toISOString(), ...(extra.note ? { note: extra.note } : {}) }]);
@@ -142,6 +149,10 @@ export async function transition(
                     history = history || ${entry}::jsonb,
                     refunded_amount = coalesce(${extra.refundedAmount ?? null}::numeric, refunded_amount),
                     merchant_note = coalesce(${extra.merchantNote ?? null}, merchant_note),
+                    credit_code = coalesce(${extra.credit?.code ?? null}, credit_code),
+                    credit_amount = coalesce(${extra.credit?.amount ?? null}::numeric, credit_amount),
+                    credit_expires_at = coalesce(${extra.credit?.expiresAt ?? null}::timestamptz, credit_expires_at),
+                    credit_coupon_id = coalesce(${extra.credit?.couponId ?? null}, credit_coupon_id),
                     updated_at = now()
                 where instance_id = ${instanceId} and id = ${id} and status = any(${from})
                 returning *`,

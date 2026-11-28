@@ -58,6 +58,8 @@ const en = {
   'status.RECEIVED': 'Received, refund in progress',
   'status.REFUNDING': 'Refund in progress',
   'status.REFUNDED': 'Refunded',
+  'status.CREDITED': 'Store credit issued',
+  storeCredit: 'Your store credit code: {code} ({amount}). Use it once by {date}; any amount not spent on that order is lost.',
 
   withdrawal: 'Withdrawal',
   withdrawalPrefix: 'Withdrawal {reference}',
@@ -156,6 +158,8 @@ const de: Messages = {
   'status.RECEIVED': 'Erhalten, Erstattung in Bearbeitung',
   'status.REFUNDING': 'Erstattung in Bearbeitung',
   'status.REFUNDED': 'Erstattet',
+  'status.CREDITED': 'Gutschrift ausgestellt',
+  storeCredit: 'Ihr Gutscheincode: {code} ({amount}). Einmal einlösbar bis {date}; ein nicht genutzter Restbetrag verfällt.',
 
   withdrawal: 'Widerruf',
   withdrawalPrefix: 'Widerruf {reference}',
@@ -250,6 +254,8 @@ const fr: Messages = {
   'status.RECEIVED': 'Reçu, remboursement en cours',
   'status.REFUNDING': 'Remboursement en cours',
   'status.REFUNDED': 'Remboursé',
+  'status.CREDITED': 'Avoir émis',
+  storeCredit: 'Votre code d’avoir : {code} ({amount}). Utilisable une fois jusqu’au {date} ; le montant non utilisé lors de cette commande est perdu.',
 
   withdrawal: 'Rétractation',
   withdrawalPrefix: 'Rétractation {reference}',
@@ -344,6 +350,8 @@ const es: Messages = {
   'status.RECEIVED': 'Recibida, reembolso en curso',
   'status.REFUNDING': 'Reembolso en curso',
   'status.REFUNDED': 'Reembolsada',
+  'status.CREDITED': 'Crédito emitido',
+  storeCredit: 'Tu código de crédito: {code} ({amount}). Úsalo una vez antes del {date}; lo que no gastes en ese pedido se pierde.',
 
   withdrawal: 'Desistimiento',
   withdrawalPrefix: 'Desistimiento {reference}',
@@ -438,6 +446,8 @@ const it: Messages = {
   'status.RECEIVED': 'Ricevuto, rimborso in corso',
   'status.REFUNDING': 'Rimborso in corso',
   'status.REFUNDED': 'Rimborsato',
+  'status.CREDITED': 'Credito emesso',
+  storeCredit: 'Il tuo codice credito: {code} ({amount}). Utilizzabile una volta entro il {date}; l’importo non speso in quell’ordine va perso.',
 
   withdrawal: 'Recesso',
   withdrawalPrefix: 'Recesso {reference}',
@@ -532,6 +542,8 @@ const nl: Messages = {
   'status.RECEIVED': 'Ontvangen, terugbetaling bezig',
   'status.REFUNDING': 'Terugbetaling bezig',
   'status.REFUNDED': 'Terugbetaald',
+  'status.CREDITED': 'Tegoed uitgegeven',
+  storeCredit: 'Je tegoedcode: {code} ({amount}). Eenmalig te gebruiken tot {date}; wat je bij die bestelling niet gebruikt, vervalt.',
 
   withdrawal: 'Herroeping',
   withdrawalPrefix: 'Herroeping {reference}',
@@ -627,6 +639,8 @@ const pt: Messages = {
   'status.RECEIVED': 'Recebida, reembolso em curso',
   'status.REFUNDING': 'Reembolso em curso',
   'status.REFUNDED': 'Reembolsada',
+  'status.CREDITED': 'Crédito emitido',
+  storeCredit: 'O seu código de crédito: {code} ({amount}). Utilizável uma vez até {date}; o valor não gasto nessa encomenda perde-se.',
 
   withdrawal: 'Resolução do contrato',
   withdrawalPrefix: 'Resolução {reference}',

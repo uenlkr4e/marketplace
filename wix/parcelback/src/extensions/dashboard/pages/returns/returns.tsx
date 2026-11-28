@@ -13,6 +13,7 @@ import {
   Loader,
   Modal,
   Page,
+  RadioGroup,
   SectionHelper,
   Table,
   Text,
@@ -20,8 +21,8 @@ import {
 } from '@wix/design-system';
 import '@wix/design-system/styles.global.css';
 import { dashboard } from '@wix/dashboard';
-import type { RefundPlan, ReturnRequest, ReturnStatus } from '../../../../shared/returns';
-import { applyAction, listReturnRequests, planRefund, refundRequest } from './return-actions';
+import { STORE_CREDIT_VALID_DAYS, type RefundPlan, type ReturnRequest, type ReturnStatus } from '../../../../shared/returns';
+import { applyAction, creditRequest, listReturnRequests, planRefund, refundRequest } from './return-actions';
 
 const STATUS_SKIN: Record<ReturnStatus, 'warning' | 'general' | 'danger' | 'success' | 'neutral'> = {
   REQUESTED: 'warning',
@@ -30,6 +31,7 @@ const STATUS_SKIN: Record<ReturnStatus, 'warning' | 'general' | 'danger' | 'succ
   REFUNDING: 'neutral',
   REJECTED: 'danger',
   REFUNDED: 'success',
+  CREDITED: 'success',
 };
 const OPEN: ReturnStatus[] = ['REQUESTED', 'APPROVED', 'RECEIVED', 'REFUNDING'];
 
@@ -44,7 +46,8 @@ const kindLabel = (r: ReturnRequest) => (r.kind === 'WITHDRAWAL' ? 'withdrawal' 
 function exportCsv(requests: ReturnRequest[]) {
   const header = [
     'Reference', 'Type', 'Order', 'Customer name', 'Customer email', 'Items', 'Reason', 'Customer note',
-    'Status', 'Submitted (UTC)', 'Last updated (UTC)', 'Merchant note', 'Refunded amount', 'Currency', 'History',
+    'Status', 'Submitted (UTC)', 'Last updated (UTC)', 'Merchant note', 'Refunded amount', 'Store credit', 'Store credit code', 'Currency',
+    'History',
   ];
   const rows = requests.map((r) => [
     r.rmaNumber,
@@ -60,6 +63,8 @@ function exportCsv(requests: ReturnRequest[]) {
     r.updatedAt,
     r.merchantNote ?? '',
     r.refundedAmount == null ? '' : r.refundedAmount.toFixed(2),
+    r.credit ? r.credit.amount.toFixed(2) : '',
+    r.credit?.code ?? '',
     r.currency,
     r.history.map((h) => `${h.status} ${h.at}${h.note ? ` (${h.note})` : ''}`).join('; '),
   ]);
@@ -89,6 +94,8 @@ type RefundDraft = {
   amount: string;
   restock: Record<string, number>;
   notify: boolean;
+  // Money back to the original payment, or store credit (a single-use discount code).
+  payout: 'refund' | 'credit';
 };
 // Rejecting requires a reason; it's shown to the customer in the rejection email.
 type RejectDraft = { request: ReturnRequest; reason: string };
@@ -134,7 +141,7 @@ const ReturnsPage: FC = () => {
     try {
       const plan = await planRefund(request);
       const restock = Object.fromEntries(request.items.map((i) => [i.lineItemId, i.quantity]));
-      setRefund({ request, plan, amount: request.requestedAmount.toFixed(2), restock, notify: true });
+      setRefund({ request, plan, amount: request.requestedAmount.toFixed(2), restock, notify: true, payout: 'refund' });
     } catch (e) {
       dashboard.showToast({ message: `Couldn't check the payment: ${errorMessage(e)}`, type: 'error' });
     } finally {
@@ -143,10 +150,18 @@ const ReturnsPage: FC = () => {
   };
 
   const confirmRefund = async () => {
-    if (!refund || refund.plan.kind === 'none') return;
+    if (!refund || (refund.payout === 'refund' && refund.plan.kind === 'none')) return;
     const { request, plan, restock, notify } = refund;
     const amount = Number(refund.amount);
     setRefund(null);
+    if (refund.payout === 'credit') {
+      await run(
+        request,
+        () => creditRequest(request, { amount, notifyCustomer: notify }),
+        `${request.rmaNumber} settled with store credit.`,
+      );
+      return;
+    }
     await run(
       request,
       () =>
@@ -323,8 +338,11 @@ const ReturnsPage: FC = () => {
                         <Text size="small">
                           {r.status === 'REFUNDED' && r.refundedAmount != null
                             ? `${money(r.refundedAmount, r.currency)} refunded`
-                            : money(r.requestedAmount, r.currency)}
+                            : r.credit
+                              ? `${money(r.credit.amount, r.currency)} store credit`
+                              : money(r.requestedAmount, r.currency)}
                         </Text>
+                        {r.credit && <Text size="tiny" secondary>{`Code ${r.credit.code}`}</Text>}
                       </Box>
                     ),
                   },
@@ -392,9 +410,11 @@ const ReturnsPage: FC = () => {
       <Modal isOpen={refund !== null} onRequestClose={() => setRefund(null)} shouldCloseOnOverlayClick>
         {refund && (
           <CustomModalLayout
-            title={`Refund ${refund.request.rmaNumber}`}
-            primaryButtonText={refund.plan.kind === 'manual' ? 'Record refund' : 'Refund'}
-            primaryButtonProps={{ disabled: refund.plan.kind === 'none' || !amountValid }}
+            title={`Settle ${refund.request.rmaNumber}`}
+            primaryButtonText={
+              refund.payout === 'credit' ? 'Issue store credit' : refund.plan.kind === 'manual' ? 'Record refund' : 'Refund'
+            }
+            primaryButtonProps={{ disabled: (refund.payout === 'refund' && refund.plan.kind === 'none') || !amountValid }}
             primaryButtonOnClick={confirmRefund}
             secondaryButtonText="Cancel"
             secondaryButtonOnClick={() => setRefund(null)}
@@ -402,55 +422,84 @@ const ReturnsPage: FC = () => {
             width="520px"
             content={
               <Box direction="vertical" gap="SP4">
-                {refund.plan.kind === 'automatic' && (
+                {refund.request.kind === 'WITHDRAWAL' ? (
+                  <Text size="small" secondary>
+                    Withdrawals are refunded to the original payment; store credit isn't offered for them.
+                  </Text>
+                ) : (
+                  <RadioGroup
+                    value={refund.payout}
+                    onChange={(value) => setRefund({ ...refund, payout: value as RefundDraft['payout'] })}
+                  >
+                    <RadioGroup.Radio value="refund">Refund to the original payment</RadioGroup.Radio>
+                    <RadioGroup.Radio value="credit">Store credit (single-use discount code)</RadioGroup.Radio>
+                  </RadioGroup>
+                )}
+
+                {refund.payout === 'refund' && refund.plan.kind === 'automatic' && (
                   <Text>{`The money goes back to the customer's original payment (${refund.plan.method}).`}</Text>
                 )}
-                {refund.plan.kind === 'manual' && (
+                {refund.payout === 'refund' && refund.plan.kind === 'manual' && (
                   <SectionHelper skin="warning">
                     {`This order was paid with ${refund.plan.method || 'a manual payment method'}, which Wix can't refund automatically (${refund.plan.reason}). Send the money to the customer yourself; this only records the refund in Wix.`}
                   </SectionHelper>
                 )}
-                {refund.plan.kind === 'none' && (
+                {refund.payout === 'refund' && refund.plan.kind === 'none' && (
                   <SectionHelper skin="danger">{`This order can't be refunded: ${refund.plan.reason}.`}</SectionHelper>
                 )}
+                {refund.payout === 'credit' && (
+                  <Text>
+                    {`The customer gets a discount code worth this amount, valid in your store for ${STORE_CREDIT_VALID_DAYS} days and usable once. Anything not spent on that order is lost. You can add a bonus to make credit more attractive than a refund.`}
+                  </Text>
+                )}
+
                 <FormField
-                  label={`Refund amount (${refund.request.currency})`}
+                  label={`${refund.payout === 'credit' ? 'Credit amount' : 'Refund amount'} (${refund.request.currency})`}
                   status={amountValid ? undefined : 'error'}
                   statusMessage={amountValid ? undefined : 'Enter an amount like 12.50'}
                 >
                   <Input value={refund.amount} onChange={(e) => setRefund({ ...refund, amount: e.target.value })} />
                 </FormField>
-                <Box direction="vertical" gap="SP1">
-                  <Text weight="bold">Put back in stock</Text>
-                  {refund.request.items.map((item) => {
-                    const count = refund.restock[item.lineItemId] ?? 0;
-                    const setCount = (n: number) =>
-                      setRefund({ ...refund, restock: { ...refund.restock, [item.lineItemId]: n } });
-                    return item.quantity === 1 ? (
-                      <Checkbox key={item.lineItemId} checked={count === 1} onChange={(e) => setCount(e.target.checked ? 1 : 0)}>
-                        {item.name}
-                      </Checkbox>
-                    ) : (
-                      <Box key={item.lineItemId} gap="SP2" verticalAlign="middle">
-                        <Box width="72px">
-                          <Input
-                            type="number"
-                            min={0}
-                            max={item.quantity}
-                            value={String(count)}
-                            onChange={(e) => setCount(Math.min(item.quantity, Math.max(0, Math.floor(Number(e.target.value) || 0))))}
-                          />
+
+                {refund.payout === 'refund' ? (
+                  <Box direction="vertical" gap="SP1">
+                    <Text weight="bold">Put back in stock</Text>
+                    {refund.request.items.map((item) => {
+                      const count = refund.restock[item.lineItemId] ?? 0;
+                      const setCount = (n: number) =>
+                        setRefund({ ...refund, restock: { ...refund.restock, [item.lineItemId]: n } });
+                      return item.quantity === 1 ? (
+                        <Checkbox key={item.lineItemId} checked={count === 1} onChange={(e) => setCount(e.target.checked ? 1 : 0)}>
+                          {item.name}
+                        </Checkbox>
+                      ) : (
+                        <Box key={item.lineItemId} gap="SP2" verticalAlign="middle">
+                          <Box width="72px">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={item.quantity}
+                              value={String(count)}
+                              onChange={(e) => setCount(Math.min(item.quantity, Math.max(0, Math.floor(Number(e.target.value) || 0))))}
+                            />
+                          </Box>
+                          <Text>{`of ${item.quantity} × ${item.name}`}</Text>
                         </Box>
-                        <Text>{`of ${item.quantity} × ${item.name}`}</Text>
-                      </Box>
-                    );
-                  })}
+                      );
+                    })}
+                    <Text size="small" secondary>
+                      Leave damaged items out so they aren't sold again.
+                    </Text>
+                  </Box>
+                ) : (
                   <Text size="small" secondary>
-                    Leave damaged items out so they aren't sold again.
+                    Store credit doesn't change your stock. If the items can be sold again, adjust the inventory in Wix
+                    Stores.
                   </Text>
-                </Box>
+                )}
+
                 <Checkbox checked={refund.notify} onChange={(e) => setRefund({ ...refund, notify: e.target.checked })}>
-                  Email the customer a refund confirmation
+                  {refund.payout === 'credit' ? 'Email the customer the code' : 'Email the customer a refund confirmation'}
                 </Checkbox>
               </Box>
             }

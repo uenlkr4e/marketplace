@@ -37,6 +37,7 @@ type LookupResult = {
       status: string;
       items: { name: string; quantity: number }[];
       rejectionReason: string | null;
+      credit: { code: string; amount: number; expiresAt: string; currency: string } | null;
     }[];
   };
   withdrawal: { available: boolean; reason: string | null; reasonCode: string | null; periodEndsAt: string | null };
@@ -146,6 +147,14 @@ class OrderLookup extends HTMLElement {
   // EU withdrawal button, switched on in the widget settings.
   private get withdrawalEnabled() {
     return this.getAttribute('withdrawal-button') === 'true';
+  }
+
+  private money(amount: number, currency: string) {
+    try {
+      return new Intl.NumberFormat(this.locale, { style: 'currency', currency }).format(amount);
+    } catch {
+      return `${amount.toFixed(2)} ${currency}`;
+    }
   }
 
   private date(iso: string) {
@@ -294,6 +303,18 @@ class OrderLookup extends HTMLElement {
             const li = el('li', {
               textContent: `${reference}: ${r.items.map((i) => `${i.name} × ${i.quantity}`).join(', ')} (${status})`,
             });
+            if (r.credit) {
+              li.append(
+                el('br'),
+                el('span', {
+                  textContent: t('storeCredit', {
+                    code: r.credit.code,
+                    amount: this.money(r.credit.amount, r.credit.currency),
+                    date: this.date(r.credit.expiresAt),
+                  }),
+                }),
+              );
+            }
             if (r.rejectionReason) {
               li.append(el('br'), el('span', { className: 'abo-muted', textContent: t('rejectionReason', { reason: r.rejectionReason }) }));
             }

@@ -29,3 +29,14 @@ export async function refundRequest(
   });
   return updated;
 }
+
+export async function creditRequest(
+  request: ReturnRequest,
+  options: { amount: number; notifyCustomer: boolean },
+): Promise<ReturnRequest> {
+  const { request: updated } = await call<{ request: ReturnRequest }>('merchant/store-credit', {
+    method: 'POST',
+    body: { id: request.id, ...options },
+  });
+  return updated;
+}

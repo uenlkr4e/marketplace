@@ -125,6 +125,15 @@ npm run db:delete-store -- <instanceId>   # delete one store's data (support req
 
 ## Tested
 
+**Store credit (2026-11-28, `wix app dev`, main dev site):**
+
+- [x] Refund dialog → "Store credit (single-use discount code)" on R10002-1 ($119): 200, request CREDITED, coupon `CR10002-1-VEQL` created in Wix (read back with the Coupons API: usage limit 1, $119 off, stores scope, our app ID), 12-month expiry stored
+- [x] Order page shows "Store credit issued" with the code, amount and expiry
+- [x] Withdrawals: the dialog doesn't offer store credit and the endpoint refuses it (EU: refund with the same means of payment)
+- [ ] The coupon doesn't appear in the site's Coupons list (filter shows nothing either), though the API returns it. Redeeming the code at checkout is untested: test on the demo site's shop after release.
+- [ ] That first coupon was created with Wix's default `limitedToOneItem: true` (discount capped at the cheapest item); fixed afterwards by setting it to false, not yet re-tested
+- [ ] "Store credit issued" trigger created (key `store_credit_issued`); no pre-installed email for it yet
+
 **Return instructions and per-item restock (2026-11-28, `wix app dev`, main dev site):**
 
 - [x] Settings → Return instructions saved and kept after a reload (`return_instructions` column added with `npm run db:migrate`)

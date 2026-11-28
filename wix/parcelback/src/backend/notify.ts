@@ -10,7 +10,12 @@ import type { ReturnRequest } from '../shared/returns';
 // Trigger keys and payload fields must match the triggers configured in the
 // app dashboard (Develop > Automations).
 
-export type ReturnEvent = 'return_requested' | 'return_approved' | 'return_rejected' | 'withdrawal_received';
+export type ReturnEvent =
+  | 'return_requested'
+  | 'return_approved'
+  | 'return_rejected'
+  | 'withdrawal_received'
+  | 'store_credit_issued';
 
 const reportEvent = auth.elevate(activations.reportEvent);
 
@@ -27,7 +32,17 @@ export async function notifyCustomer(event: ReturnEvent, request: ReturnRequest)
   const itemsSummary = request.items.map((i) => `${i.name} × ${i.quantity}`).join(', ');
   // The withdrawal acknowledgement must state what was submitted and when.
   const payload =
-    event === 'withdrawal_received'
+    event === 'store_credit_issued' && request.credit
+      ? {
+          contact_id: request.contactId,
+          rma_number: request.rmaNumber,
+          order_number: request.orderNumber,
+          items_summary: itemsSummary,
+          credit_code: request.credit.code,
+          credit_amount: formatMoney(request.credit.amount, request.currency),
+          expires_on: formatDate(request.credit.expiresAt),
+        }
+      : event === 'withdrawal_received'
       ? {
           contact_id: request.contactId,
           reference: request.rmaNumber,
@@ -61,4 +76,18 @@ export async function notifyCustomer(event: ReturnEvent, request: ReturnRequest)
 export function formatTimestamp(iso: string): string {
   const formatted = new Date(iso).toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC' });
   return `${formatted} UTC`;
+}
+
+/** e.g. "€40.00"; falls back to "40.00 EUR" for unknown currencies. */
+export function formatMoney(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${currency}`;
+  }
+}
+
+/** e.g. "28 November 2027" */
+export function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', { dateStyle: 'long', timeZone: 'UTC' });
 }

@@ -21,12 +21,19 @@ export const WITHDRAWAL_REASON = 'Withdrawal from contract';
 // RETURN = the store's return policy; WITHDRAWAL = statutory EU withdrawal.
 export type RequestKind = 'RETURN' | 'WITHDRAWAL';
 
-// REFUNDING is a short-lived lock while the payment provider processes a refund.
-export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'RECEIVED' | 'REFUNDING' | 'REFUNDED';
+// REFUNDING is a short-lived lock while a refund or store credit is processed.
+// CREDITED = settled with store credit (a single-use coupon) instead of a refund.
+export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'RECEIVED' | 'REFUNDING' | 'REFUNDED' | 'CREDITED';
 
 // Requests in these states "hold" their quantities against the order. REFUNDED
 // isn't listed: once refunded, Wix's own line-item refundQuantity covers it.
-export const ACTIVE_STATUSES: ReturnStatus[] = ['REQUESTED', 'APPROVED', 'RECEIVED', 'REFUNDING'];
+// CREDITED is: Wix doesn't count a coupon as a refund, so the request has to.
+export const ACTIVE_STATUSES: ReturnStatus[] = ['REQUESTED', 'APPROVED', 'RECEIVED', 'REFUNDING', 'CREDITED'];
+
+// Store credit codes stay valid for a year.
+export const STORE_CREDIT_VALID_DAYS = 365;
+
+export type StoreCredit = { code: string; amount: number; expiresAt: string };
 
 export type ReturnItem = {
   lineItemId: string;
@@ -75,6 +82,7 @@ export type ReturnRequest = {
   status: ReturnStatus;
   merchantNote: string | null;
   refundedAmount: number | null;
+  credit: StoreCredit | null;
   history: HistoryEntry[];
   createdAt: string;
   updatedAt: string;

@@ -72,3 +72,14 @@ alter table store_settings add column if not exists final_sale_products jsonb no
 
 -- Shown to the customer once a return is approved: return address, packing notes. (added 2026-11-28)
 alter table store_settings add column if not exists return_instructions text not null default '';
+
+-- Store credit: instead of a refund, the merchant issues a single-use Wix Stores
+-- coupon for the amount. CREDITED keeps holding the items (Wix doesn't see a
+-- coupon as a refund). (added 2026-11-28)
+alter table return_requests drop constraint if exists return_requests_status_check;
+alter table return_requests add constraint return_requests_status_check
+  check (status in ('REQUESTED', 'APPROVED', 'REJECTED', 'RECEIVED', 'REFUNDING', 'REFUNDED', 'CREDITED'));
+alter table return_requests add column if not exists credit_code text;
+alter table return_requests add column if not exists credit_amount numeric(12, 2);
+alter table return_requests add column if not exists credit_expires_at timestamptz;
+alter table return_requests add column if not exists credit_coupon_id text;
