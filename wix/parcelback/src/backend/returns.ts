@@ -6,6 +6,7 @@ import {
   WITHDRAWAL_PERIOD_DAYS,
   roundMoney,
   type RefundPlan,
+  type RestockItem,
   type ReturnItem,
   type ReturnRequest,
 } from '../shared/returns';
@@ -330,7 +331,7 @@ export async function planRefund(orderId: string): Promise<RefundPlan> {
 export async function refundInWix(
   request: ReturnRequest,
   plan: Extract<RefundPlan, { kind: 'automatic' | 'manual' }>,
-  options: { amount: number; restock: boolean; notifyCustomer: boolean },
+  options: { amount: number; restockItems: RestockItem[]; notifyCustomer: boolean },
 ): Promise<void> {
   const lineItems = request.items.map((i) => ({ lineItemId: i.lineItemId, quantity: i.quantity }));
   await refundPayments(request.orderId, {
@@ -339,7 +340,7 @@ export async function refundInWix(
     ],
     refundItems: { lineItems },
     sideEffects: {
-      restock: options.restock ? { lineItems } : undefined,
+      restock: options.restockItems.length ? { lineItems: options.restockItems } : undefined,
       notifications: { sendCustomerEmail: options.notifyCustomer },
     },
     customerReason: request.reason,

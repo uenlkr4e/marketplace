@@ -97,6 +97,7 @@ export const POST: APIRoute = withErrorHandling('order-lookup', async ({ request
       reasonCode: eligibility.code ?? null,
       windowEndsAt: eligibility.windowEndsAt ?? null,
       reasons: settings.returnReasons,
+      instructions: settings.returnInstructions,
       requests: requests.map((r) => ({
         kind: r.kind,
         rmaNumber: r.rmaNumber,

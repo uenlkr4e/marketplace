@@ -12,6 +12,9 @@ export type StoreSettings = {
   // Wix Stores products that can't be returned. They can still be withdrawn
   // from under EU law; legal exemptions are decided case by case.
   finalSaleProducts: FinalSaleProduct[];
+  // Shown to the customer once a return is approved, e.g. the return address
+  // and how to pack the parcel. Empty means nothing extra is shown.
+  returnInstructions: string;
 };
 
 export type FinalSaleProduct = { id: string; name: string };
@@ -21,6 +24,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   returnWindowDays: RETURN_WINDOW_DAYS,
   returnReasons: [...RETURN_REASONS],
   finalSaleProducts: [],
+  returnInstructions: '',
 };
 
 export const LIMITS = {
@@ -30,6 +34,7 @@ export const LIMITS = {
   maxCustomReasons: 5,
   maxReasonLength: 60,
   maxFinalSaleProducts: 200,
+  maxInstructionsLength: 1000,
 };
 
 export const isBuiltInReason = (reason: string) => (RETURN_REASONS as readonly string[]).includes(reason);
@@ -82,7 +87,22 @@ export function validateSettings(input: unknown): { settings: StoreSettings } | 
     return { error: `Mark at most ${LIMITS.maxFinalSaleProducts} products as final sale.`, field: 'finalSaleProducts' };
   }
 
+  // Older dashboards don't send it; keep it empty rather than failing the save.
+  const returnInstructions = String(raw.returnInstructions ?? '').trim().replace(/\r\n/g, '\n');
+  if (returnInstructions.length > LIMITS.maxInstructionsLength) {
+    return {
+      error: `Keep the return instructions under ${LIMITS.maxInstructionsLength} characters.`,
+      field: 'returnInstructions',
+    };
+  }
+
   return {
-    settings: { acceptReturns: raw.acceptReturns, returnWindowDays: days, returnReasons: reasons, finalSaleProducts },
+    settings: {
+      acceptReturns: raw.acceptReturns,
+      returnWindowDays: days,
+      returnReasons: reasons,
+      finalSaleProducts,
+      returnInstructions,
+    },
   };
 }

@@ -82,7 +82,14 @@ const money = (amount: number, currency: string) => {
   }
 };
 
-type RefundDraft = { request: ReturnRequest; plan: RefundPlan; amount: string; restock: boolean; notify: boolean };
+// restock: lineItemId -> how many go back into stock (defaults to everything returned).
+type RefundDraft = {
+  request: ReturnRequest;
+  plan: RefundPlan;
+  amount: string;
+  restock: Record<string, number>;
+  notify: boolean;
+};
 // Rejecting requires a reason; it's shown to the customer in the rejection email.
 type RejectDraft = { request: ReturnRequest; reason: string };
 const MAX_REASON_LENGTH = 1000;
@@ -126,7 +133,8 @@ const ReturnsPage: FC = () => {
     setBusyId(request.id);
     try {
       const plan = await planRefund(request);
-      setRefund({ request, plan, amount: request.requestedAmount.toFixed(2), restock: true, notify: true });
+      const restock = Object.fromEntries(request.items.map((i) => [i.lineItemId, i.quantity]));
+      setRefund({ request, plan, amount: request.requestedAmount.toFixed(2), restock, notify: true });
     } catch (e) {
       dashboard.showToast({ message: `Couldn't check the payment: ${errorMessage(e)}`, type: 'error' });
     } finally {
@@ -141,7 +149,12 @@ const ReturnsPage: FC = () => {
     setRefund(null);
     await run(
       request,
-      () => refundRequest(request, { amount, restock, notifyCustomer: notify }),
+      () =>
+        refundRequest(request, {
+          amount,
+          restockItems: Object.entries(restock).map(([lineItemId, quantity]) => ({ lineItemId, quantity })),
+          notifyCustomer: notify,
+        }),
       plan.kind === 'manual' ? `${request.rmaNumber} recorded as refunded.` : `${request.rmaNumber} refunded.`,
     );
   };
@@ -407,9 +420,35 @@ const ReturnsPage: FC = () => {
                 >
                   <Input value={refund.amount} onChange={(e) => setRefund({ ...refund, amount: e.target.value })} />
                 </FormField>
-                <Checkbox checked={refund.restock} onChange={(e) => setRefund({ ...refund, restock: e.target.checked })}>
-                  Put the returned items back in stock
-                </Checkbox>
+                <Box direction="vertical" gap="SP1">
+                  <Text weight="bold">Put back in stock</Text>
+                  {refund.request.items.map((item) => {
+                    const count = refund.restock[item.lineItemId] ?? 0;
+                    const setCount = (n: number) =>
+                      setRefund({ ...refund, restock: { ...refund.restock, [item.lineItemId]: n } });
+                    return item.quantity === 1 ? (
+                      <Checkbox key={item.lineItemId} checked={count === 1} onChange={(e) => setCount(e.target.checked ? 1 : 0)}>
+                        {item.name}
+                      </Checkbox>
+                    ) : (
+                      <Box key={item.lineItemId} gap="SP2" verticalAlign="middle">
+                        <Box width="72px">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={item.quantity}
+                            value={String(count)}
+                            onChange={(e) => setCount(Math.min(item.quantity, Math.max(0, Math.floor(Number(e.target.value) || 0))))}
+                          />
+                        </Box>
+                        <Text>{`of ${item.quantity} × ${item.name}`}</Text>
+                      </Box>
+                    );
+                  })}
+                  <Text size="small" secondary>
+                    Leave damaged items out so they aren't sold again.
+                  </Text>
+                </Box>
                 <Checkbox checked={refund.notify} onChange={(e) => setRefund({ ...refund, notify: e.target.checked })}>
                   Email the customer a refund confirmation
                 </Checkbox>

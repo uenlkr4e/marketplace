@@ -1,4 +1,4 @@
-import type { MerchantAction, RefundPlan, ReturnRequest } from '../../../../shared/returns';
+import type { MerchantAction, RefundPlan, RestockItem, ReturnRequest } from '../../../../shared/returns';
 import { call } from '../../api';
 
 // The backend enforces the status rules; these just call the merchant endpoints.
@@ -21,7 +21,7 @@ export async function planRefund(request: ReturnRequest): Promise<RefundPlan> {
 
 export async function refundRequest(
   request: ReturnRequest,
-  options: { amount: number; restock: boolean; notifyCustomer: boolean },
+  options: { amount: number; restockItems: RestockItem[]; notifyCustomer: boolean },
 ): Promise<ReturnRequest> {
   const { request: updated } = await call<{ request: ReturnRequest }>('merchant/refund', {
     method: 'POST',

@@ -125,6 +125,12 @@ npm run db:delete-store -- <instanceId>   # delete one store's data (support req
 
 ## Tested
 
+**Return instructions and per-item restock (2026-11-28, `wix app dev`, main dev site):**
+
+- [x] Settings → Return instructions saved and kept after a reload (`return_instructions` column added with `npm run db:migrate`)
+- [x] Order #10003 with an approved return (R10003-1): the order page shows "How to send it back" with the instructions, line breaks kept
+- [x] Refund dialog lists each returned item under "Put back in stock"; recorded R10003-1's refund with the vase left out of stock (`restockItems: [{ quantity: 0 }]`, 200, request REFUNDED)
+
 **Member orders (2026-11-28, `wix app dev`, main dev site preview):**
 
 - [x] Visitor: `/my-orders` answers `{"member":false,"orders":[]}` and the plain form shows

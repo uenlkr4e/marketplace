@@ -2,12 +2,15 @@ import type { APIRoute } from '@wix/custom-extensions/types';
 import { json, planRefund, refundInWix, withErrorHandling } from '../../backend/returns';
 import { getMerchant } from '../../backend/caller';
 import { getById, transition } from '../../backend/db';
-import { roundMoney, type ReturnStatus } from '../../shared/returns';
+import { roundMoney, validateRestock, type ReturnStatus } from '../../shared/returns';
 
 const REFUNDABLE: ReturnStatus[] = ['APPROVED', 'RECEIVED'];
 
 /**
- * POST /merchant/refund  { id, amount, restock, notifyCustomer }
+ * POST /merchant/refund  { id, amount, restockItems: [{ lineItemId, quantity }], notifyCustomer }
+ *
+ * restockItems says how many of each returned item go back into stock; the
+ * older { restock: boolean } (all or nothing) is still accepted.
  *
  * Locks the request (→ REFUNDING) before calling the payment provider, so a
  * double click or a second tab can't refund twice. On failure the request
@@ -23,6 +26,7 @@ export const POST: APIRoute = withErrorHandling('merchant/refund', async ({ requ
     id?: unknown;
     amount?: unknown;
     restock?: unknown;
+    restockItems?: unknown;
     notifyCustomer?: unknown;
   };
   const id = String(body.id ?? '');
@@ -39,6 +43,16 @@ export const POST: APIRoute = withErrorHandling('merchant/refund', async ({ requ
     return json({ error: `This request is already ${before.status.toLowerCase()}. Refresh the page.` }, 409);
   }
 
+  const restockItems =
+    body.restockItems !== undefined
+      ? validateRestock(before.items, body.restockItems)
+      : body.restock === false
+        ? []
+        : before.items.map((i) => ({ lineItemId: i.lineItemId, quantity: i.quantity }));
+  if (!restockItems) {
+    return json({ error: 'The restock quantities don’t match the returned items. Refresh the page.' }, 400);
+  }
+
   const plan = await planRefund(before.orderId);
   if (plan.kind === 'none') {
     return json({ error: `This order can’t be refunded: ${plan.reason}.` }, 409);
@@ -52,7 +66,7 @@ export const POST: APIRoute = withErrorHandling('merchant/refund', async ({ requ
   try {
     await refundInWix(locked, plan, {
       amount,
-      restock: body.restock !== false,
+      restockItems,
       notifyCustomer: body.notifyCustomer !== false,
     });
   } catch (e) {

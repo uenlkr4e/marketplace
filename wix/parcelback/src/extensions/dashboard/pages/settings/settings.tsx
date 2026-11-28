@@ -6,6 +6,7 @@ import {
   Checkbox,
   FormField,
   Input,
+  InputArea,
   Loader,
   Page,
   SectionHelper,
@@ -187,6 +188,20 @@ const SettingsPage: FC = () => {
                         suffix={<Input.Affix>days</Input.Affix>}
                       />
                     </Box>
+                  </FormField>
+                  <FormField
+                    label="Return instructions"
+                    infoContent="Shown to the customer on their order page once you approve a return."
+                    charCount={LIMITS.maxInstructionsLength - draft.returnInstructions.length}
+                  >
+                    <InputArea
+                      rows={4}
+                      maxLength={LIMITS.maxInstructionsLength}
+                      placeholder={'For example: Send the items to Example Store, 12 High Street, 10115 Berlin. Write your return number on the parcel.'}
+                      value={draft.returnInstructions}
+                      disabled={!draft.acceptReturns}
+                      onChange={(e) => update({ returnInstructions: e.target.value })}
+                    />
                   </FormField>
                 </Box>
               </Card.Content>

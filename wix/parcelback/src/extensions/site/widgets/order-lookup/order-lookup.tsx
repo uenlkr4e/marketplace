@@ -30,6 +30,7 @@ type LookupResult = {
     reasonCode: string | null;
     windowEndsAt: string | null;
     reasons: string[]; // the store's reasons (Settings page)
+    instructions?: string; // how to send items back, shown once a return is approved
     requests: {
       kind: 'RETURN' | 'WITHDRAWAL';
       rmaNumber: string;
@@ -90,6 +91,8 @@ const STYLES = `
   order-lookup .abo-muted { opacity: 0.75; }
   order-lookup .abo-row { display: flex; gap: 10px; align-items: center; }
   order-lookup .abo-row label { flex: 1; }
+  order-lookup .abo-instructions { margin: 8px 0 12px; padding: 12px 14px; border-radius: 6px; background: #f4f4f4; }
+  order-lookup .abo-instructions p { white-space: pre-line; margin: 4px 0 0; }
   order-lookup .abo-orders { display: grid; gap: 8px; margin: 4px 0 16px; }
   order-lookup .abo-card button.abo-order {
     width: 100%; margin: 0; text-align: left; font-weight: 400; line-height: 1.4;
@@ -297,6 +300,16 @@ class OrderLookup extends HTMLElement {
             return li;
           }),
         ),
+      );
+    }
+    // The store's return instructions, while a return is approved and waiting for the parcel.
+    const awaitingParcel = order.returns.requests.some((r) => r.kind === 'RETURN' && r.status === 'APPROVED');
+    if (awaitingParcel && order.returns.instructions) {
+      returnsSection.push(
+        el('div', { className: 'abo-instructions' }, [
+          el('strong', { textContent: t('returnInstructions') }),
+          el('p', { textContent: order.returns.instructions }),
+        ]),
       );
     }
     const returnsReason = order.returns.reason ? this.message(order.returns.reasonCode, order.returns.reason) : null;

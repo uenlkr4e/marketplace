@@ -69,3 +69,6 @@ create table if not exists order_locks (
 
 -- Final-sale products: [{ id, name }] by Wix Stores catalog item ID; excluded from returns, not from EU withdrawal. (added 2026-11-27)
 alter table store_settings add column if not exists final_sale_products jsonb not null default '[]'::jsonb;
+
+-- Shown to the customer once a return is approved: return address, packing notes. (added 2026-11-28)
+alter table store_settings add column if not exists return_instructions text not null default '';

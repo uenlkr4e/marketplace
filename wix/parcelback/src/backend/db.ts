@@ -151,12 +151,14 @@ export async function transition(
 
 /** The store's settings, or the defaults if it never saved any. */
 export async function getSettings(instanceId: string): Promise<StoreSettings> {
-  const [row] = (await sql()`select accept_returns, return_window_days, return_reasons, final_sale_products
+  const [row] = (await sql()`select accept_returns, return_window_days, return_reasons, final_sale_products,
+                                    return_instructions
                              from store_settings where instance_id = ${instanceId}`) as {
     accept_returns: boolean;
     return_window_days: number;
     return_reasons: string[];
     final_sale_products: StoreSettings['finalSaleProducts'];
+    return_instructions: string;
   }[];
   if (!row) return DEFAULT_SETTINGS;
   return {
@@ -164,19 +166,23 @@ export async function getSettings(instanceId: string): Promise<StoreSettings> {
     returnWindowDays: row.return_window_days,
     returnReasons: row.return_reasons,
     finalSaleProducts: row.final_sale_products,
+    returnInstructions: row.return_instructions,
   };
 }
 
 export async function saveSettings(instanceId: string, settings: StoreSettings): Promise<StoreSettings> {
   await sql()`insert into store_settings
-                (instance_id, accept_returns, return_window_days, return_reasons, final_sale_products)
+                (instance_id, accept_returns, return_window_days, return_reasons, final_sale_products,
+                 return_instructions)
               values (${instanceId}, ${settings.acceptReturns}, ${settings.returnWindowDays},
-                      ${JSON.stringify(settings.returnReasons)}::jsonb, ${JSON.stringify(settings.finalSaleProducts)}::jsonb)
+                      ${JSON.stringify(settings.returnReasons)}::jsonb, ${JSON.stringify(settings.finalSaleProducts)}::jsonb,
+                      ${settings.returnInstructions})
               on conflict (instance_id) do update
                 set accept_returns = excluded.accept_returns,
                     return_window_days = excluded.return_window_days,
                     return_reasons = excluded.return_reasons,
                     final_sale_products = excluded.final_sale_products,
+                    return_instructions = excluded.return_instructions,
                     updated_at = now()`;
   return settings;
 }

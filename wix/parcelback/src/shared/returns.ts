@@ -35,6 +35,27 @@ export type ReturnItem = {
   unitAmount: number; // per-unit price paid, after discounts and tax
 };
 
+/** How many of a returned line item go back into stock on refund (damaged ones can stay out). */
+export type RestockItem = { lineItemId: string; quantity: number };
+
+/**
+ * Checks the merchant's restock choice against the request's items. Returns
+ * the non-zero entries, or null if a line item isn't in the request or a
+ * quantity is out of range.
+ */
+export function validateRestock(items: ReturnItem[], raw: unknown): RestockItem[] | null {
+  if (!Array.isArray(raw)) return null;
+  const chosen: RestockItem[] = [];
+  for (const entry of raw) {
+    const lineItemId = String((entry as { lineItemId?: unknown })?.lineItemId ?? '');
+    const quantity = Number((entry as { quantity?: unknown })?.quantity);
+    const item = items.find((i) => i.lineItemId === lineItemId);
+    if (!item || !Number.isInteger(quantity) || quantity < 0 || quantity > item.quantity) return null;
+    if (quantity > 0) chosen.push({ lineItemId, quantity });
+  }
+  return chosen;
+}
+
 export type HistoryEntry = { status: ReturnStatus; at: string; note?: string };
 
 export type ReturnRequest = {
