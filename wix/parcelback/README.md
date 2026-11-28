@@ -151,7 +151,10 @@ npm run db:delete-store -- <instanceId>   # delete one store's data (support req
 - [x] Visitor: `/my-orders` answers `{"member":false,"orders":[]}` and the plain form shows
 - [x] Guest lookup of #10004 with its email still works
 - [x] Order number without an email from a non-member: `400 invalid_customer` (the server only drops the email for the member's own orders)
-- [ ] Logged-in member: order list, one-click lookup, return and withdrawal without an email. Editor preview doesn't send a member token, so test this on the demo site after the next release.
+- [x] Logged-in member on the demo site, 2.1.0 (2026-11-28): signed up as member@parcelback.app, placed order #10004 while logged in (manual payment). The widget called `/my-orders` (`member: true`, one order) and showed "Your orders: Order #10004 · 11/28/2026 · Processing · $68.00" above the form
+- [x] One click opened #10004 without an email; "Withdraw from contract here" → confirmed: request sent with `email: ""`, 201 `W10004-1`, confirmation addressed to the order's email (member@parcelback.app)
+- [ ] Return from the member list: #10004 isn't eligible (unpaid, not shipped), so only the withdrawal path was exercised
+- Note: the published site kept serving the old widget bundle for a while after 2.1.0 (the dashboard updated within a minute); it switched after opening the Editor and clicking Publish. If a widget change doesn't show on a live site, republish it.
 
 **EU withdrawal (2026-11-27):**
 
