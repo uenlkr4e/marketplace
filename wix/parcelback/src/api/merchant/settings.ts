@@ -2,15 +2,20 @@ import type { APIRoute } from '@wix/custom-extensions/types';
 import { json, withErrorHandling } from '../../backend/returns';
 import { getMerchant } from '../../backend/caller';
 import { getSettings, saveSettings } from '../../backend/db';
+import { getInstalledVersion } from '../../backend/app-version';
 import { validateSettings } from '../../shared/settings';
 
-/** GET /merchant/settings: the store's settings (defaults if never saved). Dashboard only. */
+/**
+ * GET /merchant/settings: the store's settings (defaults if never saved) and
+ * the installed app version. Dashboard only.
+ */
 export const GET: APIRoute = withErrorHandling('merchant/settings', async () => {
   const merchant = await getMerchant();
   if (!merchant) {
     return json({ error: 'Not allowed.' }, 403);
   }
-  return json({ settings: await getSettings(merchant.instanceId) });
+  const [settings, appVersion] = await Promise.all([getSettings(merchant.instanceId), getInstalledVersion()]);
+  return json({ settings, appVersion });
 });
 
 /** POST /merchant/settings  { acceptReturns, returnWindowDays, returnReasons } */

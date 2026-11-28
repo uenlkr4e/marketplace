@@ -41,12 +41,14 @@ const SettingsPage: FC = () => {
   const [productQuery, setProductQuery] = useState('');
   const [productResults, setProductResults] = useState<FinalSaleProduct[] | null>(null);
   const [productError, setProductError] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    call<{ settings: StoreSettings }>('merchant/settings')
-      .then(({ settings }) => {
+    call<{ settings: StoreSettings; appVersion: string | null }>('merchant/settings')
+      .then(({ settings, appVersion }) => {
         setSaved(toDraft(settings));
         setDraft(toDraft(settings));
+        setAppVersion(appVersion);
       })
       .catch((e) => dashboard.showToast({ message: `Couldn't load settings: ${errorMessage(e)}`, type: 'error' }));
   }, []);
@@ -346,6 +348,12 @@ const SettingsPage: FC = () => {
                 </Text>
               </Card.Content>
             </Card>
+
+            {appVersion && (
+              <Text size="tiny" secondary>
+                Parcelback {appVersion}
+              </Text>
+            )}
           </Box>
         </Page.Content>
       </Page>
