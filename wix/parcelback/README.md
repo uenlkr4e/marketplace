@@ -132,7 +132,9 @@ npm run db:delete-store -- <instanceId>   # delete one store's data (support req
 - [x] Withdrawals: the dialog doesn't offer store credit and the endpoint refuses it (EU: refund with the same means of payment)
 - [ ] The coupon doesn't appear in the site's Coupons list (filter shows nothing either), though the API returns it. Redeeming the code at checkout is untested: test on the demo site's shop after release.
 - [ ] That first coupon was created with Wix's default `limitedToOneItem: true` (discount capped at the cheapest item); fixed afterwards by setting it to false, not yet re-tested
-- [ ] "Store credit issued" trigger created (key `store_credit_issued`); no pre-installed email for it yet
+- [x] "Store credit issued" trigger created in the app dashboard (key `store_credit_issued`; fields: contact, return and order number, items, code, amount, valid-until date)
+- [x] Pre-installed automation "Store credit issued: customer email" (active by default): built on the main dev site by duplicating the approval email and switching the trigger, then added under Develop > Automations > Pre-installed. The site only saw the new trigger after "Test App > Test on dev site > test from here", which installs the app's latest dashboard changes. The first "Generate link" attempt failed; the second worked.
+- [ ] After releasing 2.0: publish the trigger (English users first, then all users, as with the others), then issue a credit and check the email arrives with the code
 
 **Return instructions and per-item restock (2026-11-28, `wix app dev`, main dev site):**
 
