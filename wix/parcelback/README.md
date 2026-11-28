@@ -116,7 +116,7 @@ The site widget is translated into **English, German, French, Spanish, Italian, 
 ```bash
 npm run dev          # dev server; Wix reaches the backend through a secure tunnel
 npm run typecheck
-npm run build
+npm run build        # ALWAYS before `wix app release`: release uploads dist/ as it is
 npm run db:migrate   # apply db/schema.sql to DATABASE_URL
 npm run db:delete-store -- <instanceId>   # delete one store's data (support requests)
 ```
@@ -124,6 +124,8 @@ npm run db:delete-store -- <instanceId>   # delete one store's data (support req
 **Chrome:** dashboard pages and the widget load from `http://localhost:5173`. Chrome asks whether manage.wix.com and the editor may access your local network; click **Allow**, or the page keeps spinning.
 
 ## Tested
+
+**Stale releases (found 2026-11-28):** `wix app release` uploads the existing `dist/` and doesn't rebuild. 1.2, 1.3, 1.4 and 2.0 all shipped the 01:31 build from before 1.2, so none of the code changes since then reached sites (dashboard-side changes such as permissions, triggers and translations did). Release with `npm run build && npx wix app release ...`.
 
 **Store credit (2026-11-28, `wix app dev`, main dev site):**
 
