@@ -134,7 +134,8 @@ npm run db:delete-store -- <instanceId>   # delete one store's data (support req
 - [ ] That first coupon was created with Wix's default `limitedToOneItem: true` (discount capped at the cheapest item); fixed afterwards by setting it to false, not yet re-tested
 - [x] "Store credit issued" trigger created in the app dashboard (key `store_credit_issued`; fields: contact, return and order number, items, code, amount, valid-until date)
 - [x] Pre-installed automation "Store credit issued: customer email" (active by default): built on the main dev site by duplicating the approval email and switching the trigger, then added under Develop > Automations > Pre-installed. The site only saw the new trigger after "Test App > Test on dev site > test from here", which installs the app's latest dashboard changes. The first "Generate link" attempt failed; the second worked.
-- [ ] After releasing 2.0: publish the trigger (English users first, then all users, as with the others), then issue a credit and check the email arrives with the code
+- [x] 2.0.0 released (major: Manage Coupons permission); "Store credit issued" trigger published (2026-11-28). Publishing a trigger leaves a "Draft version" with unreleased changes in the app dashboard until the next CLI release; that's expected.
+- [ ] Issue a credit on 2.0 and check the email arrives with the code; redeem the code at checkout
 
 **Return instructions and per-item restock (2026-11-28, `wix app dev`, main dev site):**
 
