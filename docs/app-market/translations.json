@@ -3,12 +3,12 @@
     "name": "Parcelback: Retoure & Tracking",
     "teaser": "Retouren, Erstattungen & Sendungsverfolgung",
     "features": [
-      "Bestellstatus-Seite für Kunden, ohne Kundenkonto",
+      "Bestellstatus-Seite für Kunden; Mitglieder sehen ihre Bestellungen",
       "Retouren per Self-Service mit Ihrer Frist, Ihren Gründen und Ausnahmen",
-      "Annehmen, ablehnen und erstatten mit einem Klick, inkl. Wiedereinlagerung",
+      "Erstattung mit einem Klick oder Gutschrift, inkl. Wiedereinlagerung",
       "EU-Widerrufsbutton und Kundenseite in 7 Sprachen"
     ],
-    "description": "Parcelback gibt Ihrem Shop ein Retourenportal und eine Seite zur Sendungsverfolgung, die Kunden ohne Kundenkonto nutzen können.\n\nKunden geben ihre Bestellnummer und E-Mail-Adresse ein und sehen ihre Artikel, Sendungen und Tracking-Links. Für eine Rücksendung wählen sie die Artikel und einen Grund und erhalten sofort eine Retourennummer.\n\nSie bearbeiten alle Anfragen in einem Dashboard: annehmen oder mit einer für den Kunden sichtbaren Begründung ablehnen, den Wareneingang bestätigen und mit einem Klick erstatten, optional mit Wiedereinlagerung. Nicht automatisch erstattbare Zahlungen werden für Sie erfasst.\n\nLegen Sie Ihre Rückgabefrist und Ihre Gründe fest und schließen Sie Produkte vom Umtausch aus. Kunden erhalten bei jedem Schritt eine E-Mail von Ihrem Shop, deren Text Sie anpassen können.\n\nSie verkaufen an Kunden in der EU? Aktivieren Sie den Widerrufsbutton, den die EU für Online-Käufe vorschreibt. Kunden bestätigen in zwei Schritten und erhalten eine Bestätigung mit Zeitstempel auf dem Bildschirm und per E-Mail. Die Kundenseite gibt es auf Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch und Portugiesisch. Das Dashboard ist auf Englisch.",
+    "description": "Parcelback gibt Ihrem Shop ein Retourenportal und eine Seite zur Sendungsverfolgung, die Kunden ohne Kundenkonto nutzen können.\n\nKunden geben Bestellnummer und E-Mail-Adresse ein und sehen Artikel, Sendungen und Tracking-Links; eingeloggte Mitglieder wählen die Bestellung einfach aus ihrer Liste. Für eine Rücksendung wählen sie Artikel und Grund und erhalten sofort eine Retourennummer.\n\nSie bearbeiten alle Anfragen in einem Dashboard: annehmen oder mit sichtbarer Begründung ablehnen. Sind die Artikel zurück, erstatten Sie mit einem Klick oder geben eine Gutschrift als einmaligen Rabattcode, optional mit Bonus, und wählen, was wieder eingelagert wird.\n\nLegen Sie Rückgabefrist, Gründe, ausgeschlossene Produkte und Rücksendehinweise fest. Kunden erhalten bei jedem Schritt eine E-Mail von Ihrem Shop, deren Text Sie anpassen können.\n\nSie verkaufen in die EU? Aktivieren Sie den Widerrufsbutton, den die EU für Online-Käufe vorschreibt. Kunden bestätigen in zwei Schritten und erhalten eine Bestätigung mit Zeitstempel. Die Kundenseite gibt es auf Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch und Portugiesisch. Das Dashboard ist auf Englisch.",
     "keywords": [
       "Retouren",
       "Sendungsverfolgung",
@@ -46,19 +46,25 @@
       "Returns": "Retouren",
       "Manage Returns in your dashboard.": "Retouren im Dashboard verwalten.",
       "order-lookup": "Bestellstatus",
-      "default": "Standard"
+      "default": "Standard",
+      "Store credit issued: customer email": "Gutschrift ausgestellt: E-Mail an Kunden",
+      "Send store credit email": "Gutschrift-E-Mail senden",
+      "Store credit issued": "Gutschrift ausgestellt",
+      "Code valid until": "Code gültig bis",
+      "Store credit code": "Gutscheincode",
+      "Store credit amount": "Betrag der Gutschrift"
     }
   },
   "fr": {
     "name": "Parcelback : retours et suivi",
     "teaser": "Retours, remboursements et suivi de commande",
     "features": [
-      "Page de suivi de commande pour vos clients, sans compte",
+      "Page de suivi de commande ; les membres voient leurs commandes",
       "Retours en libre-service selon votre délai, vos motifs et vos exclusions",
-      "Acceptez, refusez et remboursez en un clic, avec remise en stock",
+      "Remboursement en un clic ou avoir, avec remise en stock",
       "Bouton de rétractation UE et page client en 7 langues"
     ],
-    "description": "Parcelback offre à votre boutique un portail de retours en libre-service et une page de suivi de commande, utilisables sans créer de compte.\n\nVos clients saisissent leur numéro de commande et leur e-mail pour voir leurs articles, leurs envois et les liens de suivi. Pour renvoyer un article, ils choisissent les articles et un motif, et reçoivent aussitôt un numéro de retour.\n\nVous traitez toutes les demandes dans un seul tableau de bord : acceptez-les ou refusez-les avec un motif visible par le client, marquez les articles comme reçus, puis remboursez en un clic, avec remise en stock en option. Les paiements non remboursables automatiquement sont enregistrés pour vous.\n\nDéfinissez votre délai de retour et vos motifs, et excluez des produits des retours. Vos clients reçoivent un e-mail de votre boutique à chaque étape, et vous pouvez en modifier le texte.\n\nVous vendez dans l’UE ? Activez le bouton de rétractation exigé par l’UE pour les achats en ligne. Le client confirme en deux étapes et reçoit une confirmation horodatée à l’écran et par e-mail. La page client existe en français, anglais, allemand, espagnol, italien, néerlandais et portugais. Le tableau de bord est en anglais.",
+    "description": "Parcelback offre à votre boutique un portail de retours en libre-service et une page de suivi de commande, utilisables sans créer de compte.\n\nVos clients saisissent leur numéro de commande et leur e-mail pour voir leurs articles, envois et liens de suivi ; les membres connectés la choisissent dans leur liste. Pour renvoyer un article, ils choisissent les articles et un motif, et reçoivent aussitôt un numéro de retour.\n\nVous traitez toutes les demandes dans un seul tableau de bord : acceptez-les ou refusez-les avec un motif visible par le client. Articles reçus ? Remboursez en un clic ou offrez un avoir (code promo à usage unique, bonus en option) et choisissez ce qui retourne en stock.\n\nDéfinissez votre délai de retour, vos motifs, les produits exclus et vos instructions de retour. Vos clients reçoivent un e-mail de votre boutique à chaque étape, au texte modifiable.\n\nVous vendez dans l’UE ? Activez le bouton de rétractation exigé par l’UE pour les achats en ligne. Le client confirme en deux étapes et reçoit une confirmation horodatée. La page client existe en français, anglais, allemand, espagnol, italien, néerlandais et portugais. Le tableau de bord est en anglais.",
     "keywords": [
       "retours",
       "suivi de commande",
@@ -96,19 +102,25 @@
       "Returns": "Retours",
       "Manage Returns in your dashboard.": "Gérez les retours dans votre tableau de bord.",
       "order-lookup": "Suivi de commande",
-      "default": "Par défaut"
+      "default": "Par défaut",
+      "Store credit issued: customer email": "Avoir émis : e-mail au client",
+      "Send store credit email": "Envoyer l’e-mail d’avoir",
+      "Store credit issued": "Avoir émis",
+      "Code valid until": "Code valable jusqu’au",
+      "Store credit code": "Code d’avoir",
+      "Store credit amount": "Montant de l’avoir"
     }
   },
   "es": {
     "name": "Parcelback: devoluciones",
     "teaser": "Devoluciones, reembolsos y seguimiento",
     "features": [
-      "Página de seguimiento de pedidos para clientes, sin cuenta",
+      "Página de seguimiento de pedidos; los miembros ven sus pedidos",
       "Devoluciones autoservicio con tu plazo, tus motivos y tus exclusiones",
-      "Aprueba, rechaza y reembolsa en un clic, con reposición de stock",
+      "Reembolso en un clic o crédito en tienda, con reposición de stock",
       "Botón de desistimiento de la UE y página de cliente en 7 idiomas"
     ],
-    "description": "Parcelback da a tu tienda un proceso de devoluciones autoservicio y una página de seguimiento de pedidos que los clientes pueden usar sin crear una cuenta.\n\nLos clientes introducen su número de pedido y su email para ver sus artículos, envíos y enlaces de seguimiento. Para devolver algo, eligen los artículos y un motivo, y reciben al instante un número de devolución.\n\nGestionas todas las solicitudes en un solo panel: apruébalas o recházalas con un motivo que el cliente ve, marca los artículos como recibidos y reembolsa en un clic, con reposición de stock opcional. Los pagos que no se pueden reembolsar automáticamente quedan registrados.\n\nDefine tu plazo de devolución y tus motivos, y marca productos como venta final. Tus clientes reciben un email de tu tienda en cada paso, y puedes editar el texto.\n\n¿Vendes a clientes de la UE? Activa el botón de desistimiento que exige la UE para las compras online. El cliente confirma en dos pasos y recibe una confirmación con fecha y hora en pantalla y por email. La página de cliente está en español, inglés, alemán, francés, italiano, neerlandés y portugués. El panel está en inglés.",
+    "description": "Parcelback da a tu tienda un proceso de devoluciones autoservicio y una página de seguimiento de pedidos que los clientes pueden usar sin crear una cuenta.\n\nLos clientes introducen su número de pedido y su email para ver sus artículos, envíos y enlaces de seguimiento; los miembros con sesión iniciada eligen el pedido de su lista. Para devolver algo, eligen los artículos y un motivo, y reciben al instante un número de devolución.\n\nGestionas todas las solicitudes en un solo panel: apruébalas o recházalas con un motivo que el cliente ve. Cuando vuelvan los artículos, reembolsa en un clic o da crédito en tienda como código de descuento de un solo uso, con bonificación opcional, y elige qué vuelve al stock.\n\nDefine tu plazo de devolución, tus motivos, los productos excluidos y las instrucciones de devolución. Tus clientes reciben un email de tu tienda en cada paso, y puedes editar el texto.\n\n¿Vendes en la UE? Activa el botón de desistimiento que exige la UE para las compras online. El cliente confirma en dos pasos y recibe una confirmación con fecha y hora. La página de cliente está en español, inglés, alemán, francés, italiano, neerlandés y portugués. El panel está en inglés.",
     "keywords": [
       "devoluciones",
       "seguimiento de pedidos",
@@ -146,19 +158,25 @@
       "Returns": "Devoluciones",
       "Manage Returns in your dashboard.": "Gestiona las devoluciones en tu panel.",
       "order-lookup": "Seguimiento de pedido",
-      "default": "Predeterminado"
+      "default": "Predeterminado",
+      "Store credit issued: customer email": "Crédito emitido: email al cliente",
+      "Send store credit email": "Enviar email de crédito",
+      "Store credit issued": "Crédito emitido",
+      "Code valid until": "Código válido hasta",
+      "Store credit code": "Código de crédito",
+      "Store credit amount": "Importe del crédito"
     }
   },
   "it": {
     "name": "Parcelback: resi e tracking",
     "teaser": "Resi self-service, rimborsi e tracking ordini",
     "features": [
-      "Pagina di tracking ordini per i clienti, senza account",
+      "Pagina di tracking ordini; i membri vedono i loro ordini",
       "Resi self-service con i tuoi termini, motivi e prodotti esclusi",
-      "Approva, rifiuta e rimborsa con un clic, con rientro in magazzino",
+      "Rimborso con un clic o credito in negozio, con rientro in magazzino",
       "Pulsante di recesso UE e pagina cliente in 7 lingue"
     ],
-    "description": "Parcelback offre al tuo negozio una procedura di reso self-service e una pagina di tracking ordini che i clienti possono usare senza creare un account.\n\nI clienti inseriscono il numero d’ordine e l’email per vedere articoli, spedizioni e link di tracciamento. Per restituire qualcosa scelgono gli articoli e un motivo e ricevono subito un numero di reso.\n\nGestisci tutte le richieste in un’unica dashboard: approvale o rifiutale con un motivo visibile al cliente, segna gli articoli come ricevuti e rimborsa con un clic, con rientro in magazzino opzionale. I pagamenti che non possono essere rimborsati automaticamente vengono registrati per te.\n\nImposta i tuoi termini di reso e i motivi, e indica i prodotti in vendita finale. I clienti ricevono un’email dal tuo negozio a ogni passaggio, e puoi modificarne il testo.\n\nVendi a clienti nell’UE? Attiva il pulsante di recesso richiesto dall’UE per gli acquisti online. Il cliente conferma in due passaggi e riceve una conferma con data e ora a schermo e via email. La pagina cliente è disponibile in italiano, inglese, tedesco, francese, spagnolo, olandese e portoghese. La dashboard è in inglese.",
+    "description": "Parcelback offre al tuo negozio una procedura di reso self-service e una pagina di tracking ordini che i clienti possono usare senza creare un account.\n\nI clienti inseriscono il numero d’ordine e l’email per vedere articoli, spedizioni e link di tracciamento; i membri connessi scelgono l’ordine dal loro elenco. Per restituire qualcosa scelgono gli articoli e un motivo e ricevono subito un numero di reso.\n\nGestisci tutte le richieste in un’unica dashboard: approvale o rifiutale con un motivo visibile al cliente. Quando gli articoli tornano, rimborsa con un clic o dai un credito in negozio come codice sconto monouso, con bonus opzionale, e scegli cosa rientra in magazzino.\n\nImposta termini di reso, motivi, prodotti esclusi e istruzioni per il reso. I clienti ricevono un’email dal tuo negozio a ogni passaggio, e puoi modificarne il testo.\n\nVendi nell’UE? Attiva il pulsante di recesso richiesto dall’UE per gli acquisti online. Il cliente conferma in due passaggi e riceve una conferma con data e ora. La pagina cliente è disponibile in italiano, inglese, tedesco, francese, spagnolo, olandese e portoghese. La dashboard è in inglese.",
     "keywords": [
       "resi",
       "tracking ordini",
@@ -196,19 +214,25 @@
       "Returns": "Resi",
       "Manage Returns in your dashboard.": "Gestisci i resi nella dashboard.",
       "order-lookup": "Tracking ordine",
-      "default": "Predefinito"
+      "default": "Predefinito",
+      "Store credit issued: customer email": "Credito emesso: email al cliente",
+      "Send store credit email": "Invia email del credito",
+      "Store credit issued": "Credito emesso",
+      "Code valid until": "Codice valido fino al",
+      "Store credit code": "Codice credito",
+      "Store credit amount": "Importo del credito"
     }
   },
   "nl": {
     "name": "Parcelback: retour & tracking",
     "teaser": "Zelf retourneren, terugbetalen en track & trace",
     "features": [
-      "Track & trace-pagina voor klanten, zonder account",
+      "Track & trace-pagina; ingelogde leden zien hun bestellingen",
       "Zelf retourneren met jouw termijn, redenen en uitzonderingen",
-      "Goedkeuren, afwijzen en terugbetalen in één klik, met voorraadherstel",
+      "Terugbetalen in één klik of tegoed geven, met voorraadherstel",
       "EU-herroepingsknop en klantpagina in 7 talen"
     ],
-    "description": "Parcelback geeft je winkel een retourportaal en een track & trace-pagina die klanten zonder account kunnen gebruiken.\n\nKlanten vullen hun bestelnummer en e-mailadres in en zien hun artikelen, zendingen en trackinglinks. Willen ze iets terugsturen, dan kiezen ze de artikelen en een reden en krijgen ze direct een retournummer.\n\nJe behandelt alle aanvragen in één dashboard: keur ze goed of wijs ze af met een reden die de klant ziet, markeer de artikelen als ontvangen en betaal terug in één klik, eventueel met voorraadherstel. Betalingen die niet automatisch terugbetaald kunnen worden, worden voor je geregistreerd.\n\nStel je eigen retourtermijn en redenen in en sluit producten uit van retour. Klanten krijgen bij elke stap een e-mail van je winkel, en je kunt de tekst aanpassen.\n\nVerkoop je aan klanten in de EU? Zet de herroepingsknop aan die de EU verplicht stelt voor online aankopen. De klant bevestigt in twee stappen en krijgt een bevestiging met tijdstempel op het scherm en per e-mail. De klantpagina is beschikbaar in het Nederlands, Engels, Duits, Frans, Spaans, Italiaans en Portugees. Het dashboard is in het Engels.",
+    "description": "Parcelback geeft je winkel een retourportaal en een track & trace-pagina die klanten zonder account kunnen gebruiken.\n\nKlanten vullen hun bestelnummer en e-mailadres in en zien hun artikelen, zendingen en trackinglinks; ingelogde leden kiezen de bestelling gewoon uit hun lijst. Willen ze iets terugsturen, dan kiezen ze de artikelen en een reden en krijgen ze direct een retournummer.\n\nJe behandelt alle aanvragen in één dashboard: keur ze goed of wijs ze af met een reden die de klant ziet. Zijn de artikelen terug, betaal dan terug in één klik of geef tegoed als eenmalige kortingscode, eventueel met bonus, en kies wat terug op voorraad gaat.\n\nStel je retourtermijn, redenen, uitgesloten producten en retourinstructies in. Klanten krijgen bij elke stap een e-mail van je winkel, en je kunt de tekst aanpassen.\n\nVerkoop je in de EU? Zet de herroepingsknop aan die de EU verplicht stelt voor online aankopen. De klant bevestigt in twee stappen en krijgt een bevestiging met tijdstempel. De klantpagina is beschikbaar in het Nederlands, Engels, Duits, Frans, Spaans, Italiaans en Portugees. Het dashboard is in het Engels.",
     "keywords": [
       "retouren",
       "track & trace",
@@ -246,19 +270,25 @@
       "Returns": "Retouren",
       "Manage Returns in your dashboard.": "Beheer retouren in je dashboard.",
       "order-lookup": "Bestelling volgen",
-      "default": "Standaard"
+      "default": "Standaard",
+      "Store credit issued: customer email": "Tegoed uitgegeven: e-mail aan klant",
+      "Send store credit email": "E-mail met tegoed versturen",
+      "Store credit issued": "Tegoed uitgegeven",
+      "Code valid until": "Code geldig tot",
+      "Store credit code": "Tegoedcode",
+      "Store credit amount": "Bedrag tegoed"
     }
   },
   "pt": {
     "name": "Parcelback: devoluções",
     "teaser": "Devoluções, reembolsos e rastreio de encomendas",
     "features": [
-      "Página de rastreio de encomendas para clientes, sem conta",
+      "Página de rastreio de encomendas; membros veem as suas encomendas",
       "Devoluções self-service com o seu prazo, motivos e exclusões",
-      "Aprove, rejeite e reembolse num clique, com reposição de stock",
+      "Reembolso num clique ou crédito na loja, com reposição de stock",
       "Botão de livre resolução da UE e página do cliente em 7 idiomas"
     ],
-    "description": "O Parcelback dá à sua loja um processo de devoluções self-service e uma página de rastreio de encomendas que os clientes podem usar sem criar conta.\n\nOs clientes introduzem o número da encomenda e o email para ver os artigos, envios e links de rastreio. Para devolver algo, escolhem os artigos e um motivo e recebem logo um número de devolução.\n\nTrata todos os pedidos num único painel: aprove-os ou rejeite-os com um motivo que o cliente vê, marque os artigos como recebidos e reembolse num clique, com reposição de stock opcional. Os pagamentos que não podem ser reembolsados automaticamente ficam registados.\n\nDefina o seu prazo de devolução e os motivos, e marque produtos como venda final. Os clientes recebem um email da sua loja em cada passo, e pode editar o texto.\n\nVende a clientes na UE? Ative o botão de livre resolução exigido pela UE para compras online. O cliente confirma em dois passos e recebe uma confirmação com data e hora no ecrã e por email. A página do cliente está em português, inglês, alemão, francês, espanhol, italiano e neerlandês. O painel está em inglês.",
+    "description": "O Parcelback dá à sua loja um processo de devoluções self-service e uma página de rastreio de encomendas que os clientes podem usar sem criar conta.\n\nOs clientes introduzem o número da encomenda e o email para ver os artigos, envios e links de rastreio; os membros com sessão iniciada escolhem a encomenda na sua lista. Para devolver algo, escolhem os artigos e um motivo e recebem logo um número de devolução.\n\nTrata todos os pedidos num único painel: aprove-os ou rejeite-os com um motivo que o cliente vê. Quando os artigos regressarem, reembolse num clique ou dê crédito na loja como código de desconto de utilização única, com bónus opcional, e escolha o que volta ao stock.\n\nDefina o prazo de devolução, os motivos, os produtos excluídos e as instruções de devolução. Os clientes recebem um email da sua loja em cada passo, e pode editar o texto.\n\nVende na UE? Ative o botão de livre resolução exigido pela UE para compras online. O cliente confirma em dois passos e recebe uma confirmação com data e hora. A página do cliente está em português, inglês, alemão, francês, espanhol, italiano e neerlandês. O painel está em inglês.",
     "keywords": [
       "devoluções",
       "rastreio de encomendas",
@@ -296,7 +326,13 @@
       "Returns": "Devoluções",
       "Manage Returns in your dashboard.": "Gerir as devoluções no seu painel.",
       "order-lookup": "Rastreio de encomenda",
-      "default": "Predefinido"
+      "default": "Predefinido",
+      "Store credit issued: customer email": "Crédito emitido: email ao cliente",
+      "Send store credit email": "Enviar email de crédito",
+      "Store credit issued": "Crédito emitido",
+      "Code valid until": "Código válido até",
+      "Store credit code": "Código de crédito",
+      "Store credit amount": "Valor do crédito"
     }
   }
 }

@@ -51,20 +51,20 @@ To re-render after a change: run `python docs/app-market/src/generate.py`, then 
 
 **Features**
 
-1. Order tracking page for customers, no account needed
+1. Order tracking page for customers; members see their orders
 2. Self-serve returns with your window, reasons and final-sale rules
-3. Approve, reject and refund in one click, with restock
+3. Refund in one click or give store credit, with restock
 4. EU withdrawal button and customer page in 7 languages
 
-**Full description** (1,200 max):
+**Full description** (1,200 max; 1,175 used, updated 2026-11-28 for 2.1):
 
 > Parcelback gives your store a self-serve returns process and an order tracking page that customers can use without creating an account.
 >
-> Customers enter their order number and email to see their items, shipments and tracking links. To send something back, they choose the items and a reason and get a return number right away.
+> Customers enter their order number and email to see their items, shipments and tracking links; logged-in members just pick the order from their list. To send something back, they choose the items and a reason and get a return number right away.
 >
-> You handle every request in one dashboard: approve it, or reject it with a reason the customer sees, mark the items as received, then refund in one click with optional restock. Payments that can't be refunded automatically are recorded for you.
+> You handle every request in one dashboard: approve it, or reject it with a reason the customer sees. When the items are back, refund in one click or give store credit as a single-use discount code, optionally with a bonus, and choose which items go back into stock. Payments that can't be refunded automatically are recorded for you.
 >
-> Set your own return window and reasons, and mark products as final sale. Customers get an email from your store at every step, and you can edit the wording.
+> Set your return window, reasons, final-sale products and return instructions. Customers get an email from your store at every step, and you can edit the wording.
 >
 > Selling to customers in the EU? Turn on the withdrawal button for the EU's online withdrawal requirement. Customers confirm in two steps and get a timestamped confirmation on screen and by email. The customer page is available in English, German, French, Spanish, Italian, Dutch and Portuguese.
 

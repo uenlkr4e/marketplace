@@ -33,7 +33,7 @@
         <dt>Document</dt>
         <dd>Privacy policy</dd>
         <dt>Last updated</dt>
-        <dd>27 November 2026</dd>
+        <dd>28 November 2026</dd>
         <dt>Contact</dt>
         <dd><a href="mailto:privacy@parcelback.app">privacy@parcelback.app</a></dd>
       </dl>
@@ -92,13 +92,16 @@
           <tr><td>Items, quantities and prices</td><td>To know what is being returned and how much to refund</td></tr>
           <tr><td>Reason and comment the customer gives</td><td>So the store can review the request</td></tr>
           <tr><td>Status history with dates and times, the store’s notes, refunded amount</td><td>Record of how the request was handled; the date and time of a withdrawal is legally relevant</td></tr>
+          <tr><td>Store credit code, amount and expiry date (only if the store settles a return with store credit)</td><td>So the customer and the store can see the credit that was issued</td></tr>
         </tbody>
       </table>
       <h3>What we read but don’t keep</h3>
       <p>
         When a customer looks up an order, the app reads the order, its shipments and tracking links from the store’s
-        Wix account to show them, and only if both the order number and the email match. When a store refunds, the
-        app asks Wix which payments can be refunded. None of this is copied into our database. We never see card or
+        Wix account to show them, and only if both the order number and the email match, or the customer is logged in
+        to the store and the order belongs to them. For logged-in customers, the app also lists their recent orders,
+        using the member ID Wix sends with the request. When a store refunds, the app asks Wix which payments can be
+        refunded. When it gives store credit, it creates a single-use discount code in the store’s Wix account. None of this is copied into our database. We never see card or
         bank details; payments stay with the store’s payment provider.
       </p>
       <h3>Abuse protection</h3>
@@ -109,7 +112,8 @@
       </p>
       <h3>Emails</h3>
       <p>
-        Emails about a request (received, approved, rejected, withdrawal confirmation) are sent by Wix from the store,
+        Emails about a request (received, approved, rejected, withdrawal confirmation, store credit) are sent by Wix
+        from the store,
         through the store’s Wix Automations, under
         <a href="https://www.wix.com/about/privacy" rel="noopener">Wix’s privacy policy</a>.
       </p>
@@ -122,7 +126,7 @@
       <h2 id="merchants">Data about store owners</h2>
       <ul>
         <li>The store’s Wix app instance ID, which identifies the store to us.</li>
-        <li>The store’s Parcelback settings: return window, return reasons, final-sale products (their names and IDs).</li>
+        <li>The store’s Parcelback settings: return window, return reasons, return instructions, final-sale products (their names and IDs).</li>
         <li>Anything you send us when you contact support.</li>
       </ul>
       <p>
